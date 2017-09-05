@@ -23,8 +23,6 @@ import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
 import org.springframework.shell.standard.ShellOption;
 
-import static org.springframework.shell.standard.ShellOption.NULL;
-
 /**
  * @author Ilayaperumal Gopinathan
  */
@@ -40,15 +38,15 @@ public class ReleaseCommands {
 
 	@ShellMethod(key = "release undeploy", value = "Undeploy a specific release")
 	public String undeploy(
-			@ShellOption(help = "the name of the release to undeploy", defaultValue = NULL) String releaseName,
-			@ShellOption(help = "the release version", defaultValue = NULL) int releaseVersion) {
+			@ShellOption(help = "the name of the release to undeploy") String releaseName,
+			@ShellOption(help = "the release version") int releaseVersion) {
 		return skipperClient.undeploy(releaseName, releaseVersion);
 	}
 
 	@ShellMethod(key = "release rollback", value = "Rollback a specific release")
 	public String rollback(
-			@ShellOption(help = "the name of the release to rollback", defaultValue = NULL) String releaseName,
-			@ShellOption(help = "the release version to rollback to", defaultValue = NULL) int releaseVersion) {
+			@ShellOption(help = "the name of the release to rollback") String releaseName,
+			@ShellOption(help = "the release version to rollback to") int releaseVersion) {
 		return skipperClient.rollback(releaseName, releaseVersion);
 	}
 

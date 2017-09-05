@@ -20,6 +20,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 
+import javax.validation.constraints.NotNull;
+
 import org.apache.commons.io.FilenameUtils;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,8 +35,6 @@ import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
 import org.springframework.shell.standard.ShellOption;
 import org.springframework.util.Assert;
-
-import static org.springframework.shell.standard.ShellOption.NULL;
 
 /**
  * @author Ilayaperumal Gopinathan
@@ -57,24 +57,22 @@ public class PackageCommands {
 
 	@ShellMethod(key = "package deploy", value = "Deploy the package metadata")
 	public String deploy(
-			@ShellOption(help = "packageId of the package metadata to deploy", defaultValue = NULL) String packageId,
-			@ShellOption(help = "the properties file to use to deploy", defaultValue = NULL) File propertiesFile,
-			@ShellOption(help = "the release name to use", defaultValue = NULL) String releaseName,
-			@ShellOption(help = "the platform name to use", defaultValue = "default") String platformName)
+			@ShellOption(help = "packageId of the package metadata to deploy") @NotNull String packageId,
+			@ShellOption(help = "the properties file to use to deploy") File propertiesFile,
+			@ShellOption(help = "the release name to use") String releaseName,
+			@ShellOption(help = "the platform name to use") String platformName)
 			throws IOException {
 		// todo: Make releaseName & propertiesFile mutually exclusive
-		Assert.notNull(packageId, "Package Id must not be null");
 		return skipperClient.deploy(packageId, getDeployProperties(releaseName, platformName, propertiesFile));
 	}
 
 	@ShellMethod(key = "package update", value = "Update a specific release")
 	public String update(
-			@ShellOption(help = "the package id to update", defaultValue = NULL) String packageId,
-			@ShellOption(help = "the properties file to use to deploy", defaultValue = NULL) File propertiesFile,
-			@ShellOption(help = "the release name to use", defaultValue = NULL) String releaseName,
+			@ShellOption(help = "the package id to update") @NotNull String packageId,
+			@ShellOption(help = "the properties file to use to deploy") File propertiesFile,
+			@ShellOption(help = "the release name to use") String releaseName,
 			@ShellOption(help = "the platform name to use", defaultValue = "default") String platformName)
 			throws IOException {
-		Assert.notNull(packageId, "Package Id must not be null");
 		return skipperClient.update(packageId, getDeployProperties(releaseName, platformName, propertiesFile));
 	}
 
