@@ -25,6 +25,8 @@ import org.yaml.snakeyaml.Yaml;
 
 import org.springframework.cloud.skipper.domain.Package;
 import org.springframework.cloud.skipper.domain.PackageMetadata;
+import org.springframework.cloud.skipper.io.DefaultPackageReader;
+import org.springframework.cloud.skipper.io.PackageReader;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;

@@ -13,21 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.cloud.skipper.client.io;
+package org.springframework.cloud.skipper;
 
 import java.io.File;
 
-import org.springframework.cloud.skipper.domain.Package;
+import org.springframework.cloud.skipper.domain.PackageMetadata;
 
 /**
- * @author Mark Pollack
+ * @author Ilayaperumal Gopinathan
  */
-public interface PackageReader {
+public class SkipperUtils {
 
-	/**
-	 * Reads the Package from the specified file
-	 * @param directory the directory containing the unzipped file
-	 * @return the corresponding Package
-	 */
-	Package read(File directory);
+	public static File calculatePackageZipFile(PackageMetadata packageMetadata, File targetPath) {
+		return new File(targetPath, packageMetadata.getName() + "-" + packageMetadata.getVersion() + ".zip");
+	}
+
 }

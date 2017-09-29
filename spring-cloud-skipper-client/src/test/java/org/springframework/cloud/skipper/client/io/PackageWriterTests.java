@@ -38,6 +38,8 @@ import org.springframework.cloud.skipper.domain.ConfigValues;
 import org.springframework.cloud.skipper.domain.Package;
 import org.springframework.cloud.skipper.domain.PackageMetadata;
 import org.springframework.cloud.skipper.domain.Template;
+import org.springframework.cloud.skipper.io.DefaultPackageWriter;
+import org.springframework.cloud.skipper.io.PackageWriter;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.StreamUtils;

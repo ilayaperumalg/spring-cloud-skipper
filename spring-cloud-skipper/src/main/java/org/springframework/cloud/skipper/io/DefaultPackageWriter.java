@@ -13,22 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.cloud.skipper.client.io;
+package org.springframework.cloud.skipper.io;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.zeroturnaround.zip.ZipUtil;
 
+import org.springframework.cloud.skipper.SkipperUtils;
 import org.springframework.cloud.skipper.domain.Package;
 import org.springframework.cloud.skipper.domain.PackageMetadata;
 import org.springframework.core.io.ClassPathResource;
@@ -43,8 +40,6 @@ import org.springframework.util.StringUtils;
  */
 public class DefaultPackageWriter implements PackageWriter {
 
-	private static final Logger logger = LoggerFactory.getLogger(DefaultPackageWriter.class);
-
 	private Yaml yaml;
 
 	public DefaultPackageWriter() {
@@ -57,7 +52,7 @@ public class DefaultPackageWriter implements PackageWriter {
 	@Override
 	public File write(Package pkg, File targetDirectory) {
 		PackageMetadata packageMetadata = pkg.getMetadata();
-		File tmpDir = createTempDirectory("skipper" + packageMetadata.getName()).toFile();
+		File tmpDir = TempFileUtils.createTempDirectory("skipper" + packageMetadata.getName()).toFile();
 		File rootPackageDir = new File(tmpDir,
 				String.format("%s-%s", packageMetadata.getName(), packageMetadata.getVersion()));
 		rootPackageDir.mkdir();
@@ -71,7 +66,7 @@ public class DefaultPackageWriter implements PackageWriter {
 				writePackage(dependencyPkg, packageDir);
 			}
 		}
-		File targetZipFile = calculatePackageZipFile(pkg.getMetadata(), targetDirectory);
+		File targetZipFile = SkipperUtils.calculatePackageZipFile(pkg.getMetadata(), targetDirectory);
 		ZipUtil.pack(rootPackageDir, targetZipFile, true);
 		FileSystemUtils.deleteRecursively(tmpDir);
 		return targetZipFile;
@@ -114,28 +109,6 @@ public class DefaultPackageWriter implements PackageWriter {
 
 	private String generatePackageMetadata(PackageMetadata packageMetadata) {
 		return yaml.dump(packageMetadata);
-	}
-
-	// TODO these methods shoudl move to some lower level package unless we want the
-	// skipper
-	// server to depend on
-	// client.
-
-	private Path createTempDirectory(String rootName) {
-		try {
-			logger.debug("Creating temp directory with root name {}", rootName);
-			Path pathToReturn = Files.createTempDirectory(rootName);
-			logger.debug("Created temp directory {}", pathToReturn.toString());
-			return pathToReturn;
-		}
-		catch (IOException e) {
-			throw new IllegalArgumentException("Could not create temp directory", e);
-		}
-	}
-
-	private File calculatePackageZipFile(PackageMetadata packageMetadata, File targetPath) {
-		logger.debug("Calculating zip file name for {}", packageMetadata);
-		return new File(targetPath, packageMetadata.getName() + "-" + packageMetadata.getVersion() + ".zip");
 	}
 
 }

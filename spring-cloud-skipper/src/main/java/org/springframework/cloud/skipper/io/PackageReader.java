@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.cloud.skipper.client.io;
+package org.springframework.cloud.skipper.io;
 
 import java.io.File;
 
@@ -22,14 +22,12 @@ import org.springframework.cloud.skipper.domain.Package;
 /**
  * @author Mark Pollack
  */
-public interface PackageWriter {
+public interface PackageReader {
 
 	/**
-	 * Writes the package to the specified directory. File name is determined from package
-	 * metadata.
-	 * @param pkg the package to write
-	 * @param directory the directory where to create the zip file of the package.
-	 * @return the zip file in the specified directory.
+	 * Reads the Package from the specified file
+	 * @param directory the directory containing the unzipped file
+	 * @return the corresponding Package
 	 */
-	File write(Package pkg, File directory);
+	Package read(File directory);
 }
