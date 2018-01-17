@@ -144,14 +144,17 @@ public class ReleaseController {
 	@RequestMapping(path = "/{name}", method = RequestMethod.DELETE)
 	@ResponseStatus(HttpStatus.OK)
 	public Resource<Release> delete(@PathVariable("name") String releaseName) {
-		Release release = this.skipperStateMachineService.deleteRelease(releaseName, new DeleteProperties());
-		return this.releaseResourceAssembler.toResource(release);
+		return deleteRelease(releaseName, false);
 	}
 
 	@RequestMapping(path = "/{name}/{deletePackage}", method = RequestMethod.DELETE)
 	@ResponseStatus(HttpStatus.OK)
 	public Resource<Release> delete(@PathVariable("name") String releaseName,
 			@PathVariable("deletePackage") boolean deletePackage) {
+		return deleteRelease(releaseName, deletePackage);
+	}
+
+	private Resource<Release> deleteRelease(String releaseName, boolean deletePackage) {
 		DeleteProperties deleteProperties = new DeleteProperties();
 		deleteProperties.setDeletePackage(deletePackage);
 		Release release = this.skipperStateMachineService.deleteRelease(releaseName, deleteProperties);
