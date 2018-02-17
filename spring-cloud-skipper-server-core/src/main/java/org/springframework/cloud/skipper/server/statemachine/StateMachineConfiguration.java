@@ -220,7 +220,7 @@ public class StateMachineConfiguration {
 					.and()
 				.withExternal()
 					.source(SkipperStates.UPGRADE_WAIT_TARGET_APPS).target(SkipperStates.UPGRADE_CHECK_CHOICE)
-					.timer(1000)
+					.timer(10000)
 					.and()
 				.withExternal()
 					.source(SkipperStates.UPGRADE_CHECK_TARGET_APPS).target(SkipperStates.UPGRADE_WAIT_TARGET_APPS)
