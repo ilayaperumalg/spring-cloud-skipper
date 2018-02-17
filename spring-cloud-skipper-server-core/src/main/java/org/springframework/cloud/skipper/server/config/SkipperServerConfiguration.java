@@ -36,6 +36,7 @@ import org.springframework.cloud.deployer.resource.maven.MavenProperties;
 import org.springframework.cloud.deployer.resource.maven.MavenResourceLoader;
 import org.springframework.cloud.deployer.resource.support.DelegatingResourceLoader;
 import org.springframework.cloud.deployer.resource.support.LRUCleaningResourceLoaderBeanPostProcessor;
+import org.springframework.cloud.skipper.domain.CFApplicationManifestReader;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationManifestReader;
 import org.springframework.cloud.skipper.io.DefaultPackageReader;
 import org.springframework.cloud.skipper.io.DefaultPackageWriter;
@@ -235,14 +236,22 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 			DeployerRepository deployerRepository,
 			ReleaseAnalyzer releaseAnalyzer,
 			AppDeploymentRequestFactory appDeploymentRequestFactory,
-			SpringCloudDeployerApplicationManifestReader applicationManifestReader) {
+			SpringCloudDeployerApplicationManifestReader applicationManifestReader,
+			CFApplicationManifestReader cfApplicationManifestReader,
+			DelegatingResourceLoader delegatingResourceLoader) {
 		return new AppDeployerReleaseManager(releaseRepository, appDeployerDataRepository, deployerRepository,
-				releaseAnalyzer, appDeploymentRequestFactory, applicationManifestReader);
+				releaseAnalyzer, appDeploymentRequestFactory, applicationManifestReader, cfApplicationManifestReader,
+				delegatingResourceLoader);
 	}
 
 	@Bean
 	public SpringCloudDeployerApplicationManifestReader applicationSpecReader() {
 		return new SpringCloudDeployerApplicationManifestReader();
+	}
+
+	@Bean
+	public CFApplicationManifestReader cfApplicationManifestReader() {
+		return new CFApplicationManifestReader();
 	}
 
 	@Bean
@@ -270,9 +279,10 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 	public DeployAppStep DeployAppStep(DeployerRepository deployerRepository,
 			AppDeploymentRequestFactory appDeploymentRequestFactory,
 			AppDeployerDataRepository appDeployerDataRepository, ReleaseRepository releaseRepository,
-			SpringCloudDeployerApplicationManifestReader applicationManifestReader) {
+			SpringCloudDeployerApplicationManifestReader applicationManifestReader,
+			CFApplicationManifestReader cfApplicationManifestReader) {
 		return new DeployAppStep(deployerRepository, appDeploymentRequestFactory, appDeployerDataRepository,
-				releaseRepository, applicationManifestReader);
+				releaseRepository, applicationManifestReader, cfApplicationManifestReader);
 	}
 
 	@Bean
@@ -305,8 +315,9 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 	@Bean
 	public ReleaseAnalyzer releaseAnalysisService(
 			SpringCloudDeployerApplicationManifestReader applicationManifestReader,
+			CFApplicationManifestReader cfApplicationManifestReader,
 			DelegatingResourceLoader delegatingResourceLoader) {
-		return new ReleaseAnalyzer(applicationManifestReader , delegatingResourceLoader);
+		return new ReleaseAnalyzer(applicationManifestReader , cfApplicationManifestReader, delegatingResourceLoader);
 	}
 
 	@Bean

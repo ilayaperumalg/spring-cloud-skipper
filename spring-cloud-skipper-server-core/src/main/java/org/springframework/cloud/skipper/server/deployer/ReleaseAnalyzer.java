@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import org.springframework.cloud.deployer.resource.support.DelegatingResourceLoader;
 import org.springframework.cloud.skipper.SkipperException;
+import org.springframework.cloud.skipper.domain.CFApplicationManifestReader;
 import org.springframework.cloud.skipper.domain.Release;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationManifest;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationManifestReader;
@@ -46,13 +47,17 @@ public class ReleaseAnalyzer {
 
 	private final SpringCloudDeployerApplicationManifestReader applicationManifestReader;
 
+	private final CFApplicationManifestReader cfApplicationManifestReader;
+
 	private final Logger logger = LoggerFactory.getLogger(ReleaseAnalyzer.class);
 	private final DelegatingResourceLoader delegatingResourceLoader;
 	private ApplicationManifestDifferenceFactory applicationManifestDifferenceFactory = new ApplicationManifestDifferenceFactory();
 
 	public ReleaseAnalyzer(SpringCloudDeployerApplicationManifestReader applicationManifestReader,
+			CFApplicationManifestReader cfApplicationManifestReader,
 			DelegatingResourceLoader delegatingResourceLoader) {
 		this.applicationManifestReader = applicationManifestReader;
+		this.cfApplicationManifestReader = cfApplicationManifestReader;
 		this.delegatingResourceLoader = delegatingResourceLoader;
 	}
 

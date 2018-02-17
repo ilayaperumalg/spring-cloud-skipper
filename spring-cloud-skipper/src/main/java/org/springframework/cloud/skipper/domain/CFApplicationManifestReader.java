@@ -40,20 +40,21 @@ import org.springframework.cloud.skipper.SkipperException;
  * @author Mark Pollack
  * @author Ilayaperumal Gopinathan
  */
-public class SpringCloudDeployerApplicationManifestReader {
+public class CFApplicationManifestReader {
 
-	private final static Logger logger = LoggerFactory.getLogger(SpringCloudDeployerApplicationManifestReader.class);
+	private final static Logger logger = LoggerFactory.getLogger(CFApplicationManifestReader.class);
 
-	public List<SpringCloudDeployerApplicationManifest> read(String manifest) {
+	public List<CFApplicationManifest> read(String manifest) {
 		if (assertSupportedKinds(manifest)) {
-			List<SpringCloudDeployerApplicationManifest> applicationSpecs = new ArrayList<>();
+			List<CFApplicationManifest> applicationSpecs = new ArrayList<>();
 			YAMLMapper mapper = new YAMLMapper();
 			mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 			try {
-				MappingIterator<SpringCloudDeployerApplicationManifest> it = mapper.readerFor(
-						SpringCloudDeployerApplicationManifest.class).readValues(manifest);
+				MappingIterator<CFApplicationManifest> it = mapper
+																	.readerFor(CFApplicationManifest.class)
+																	.readValues(manifest);
 				while (it.hasNextValue()) {
-					SpringCloudDeployerApplicationManifest appKind = it.next();
+					CFApplicationManifest appKind = it.next();
 					applicationSpecs.add(appKind);
 				}
 			}
@@ -97,12 +98,9 @@ public class SpringCloudDeployerApplicationManifestReader {
 		Object kindObject = manifestAsMap.get("kind");
 		if (kindObject instanceof String) {
 			String kind = (String) kindObject;
-			if (kind.equalsIgnoreCase("SpringBootApp") || kind.equalsIgnoreCase("SpringCloudDeployerApplication")) {
+			if (kind.equalsIgnoreCase("CFApplication")) {
 				logger.debug("Found supported kind " + kind);
 				return true;
-			}
-			else {
-				logger.info("SpringCloudDeployerApplicationManifestReader could not find the supported kind " + kind);
 			}
 		}
 		return false;

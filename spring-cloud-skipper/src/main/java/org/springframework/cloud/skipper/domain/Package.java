@@ -15,6 +15,7 @@
  */
 package org.springframework.cloud.skipper.domain;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +37,26 @@ public class Package {
 
 	// The configuration data that this package depends on
 	private ConfigValues configValues;
+
+	public File getManifest() {
+		return manifest;
+	}
+
+	public void setManifest(File manifest) {
+		this.manifest = manifest;
+	}
+
+	public File getApplication() {
+		return application;
+	}
+
+	public void setApplication(File application) {
+		this.application = application;
+	}
+
+	private File manifest;
+
+	private File application;
 
 	// Miscellaneous files in a package, e.g. README, LICENSE, etc.
 	private List<FileHolder> fileHolders = new ArrayList<>();

@@ -21,15 +21,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.cloudfoundry.operations.applications.ApplicationManifest;
+import org.cloudfoundry.operations.applications.ApplicationManifestUtils;
+import org.cloudfoundry.operations.applications.PushApplicationManifestRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.cloud.deployer.resource.support.DelegatingResourceLoader;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.app.MultiStateAppDeployer;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.skipper.SkipperException;
+import org.springframework.cloud.skipper.domain.CFApplicationManifest;
+import org.springframework.cloud.skipper.domain.CFApplicationManifestReader;
+import org.springframework.cloud.skipper.domain.CFApplicationSpec;
 import org.springframework.cloud.skipper.domain.Manifest;
 import org.springframework.cloud.skipper.domain.Release;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationManifest;
@@ -44,6 +51,7 @@ import org.springframework.cloud.skipper.server.repository.ReleaseRepository;
 import org.springframework.cloud.skipper.server.util.ArgumentSanitizer;
 import org.springframework.cloud.skipper.server.util.ConfigValueUtils;
 import org.springframework.cloud.skipper.server.util.ManifestUtils;
+import org.springframework.core.io.Resource;
 import org.springframework.util.StringUtils;
 
 /**
@@ -71,18 +79,26 @@ public class AppDeployerReleaseManager implements ReleaseManager {
 
 	private final SpringCloudDeployerApplicationManifestReader applicationManifestReader;
 
+	private final CFApplicationManifestReader cfApplicationManifestReader;
+
+	private final DelegatingResourceLoader delegatingResourceLoader;
+
 	public AppDeployerReleaseManager(ReleaseRepository releaseRepository,
 			AppDeployerDataRepository appDeployerDataRepository,
 			DeployerRepository deployerRepository,
 			ReleaseAnalyzer releaseAnalyzer,
 			AppDeploymentRequestFactory appDeploymentRequestFactory,
-			SpringCloudDeployerApplicationManifestReader applicationManifestReader) {
+			SpringCloudDeployerApplicationManifestReader applicationManifestReader,
+			CFApplicationManifestReader cfApplicationManifestReader,
+			DelegatingResourceLoader delegatingResourceLoader) {
 		this.releaseRepository = releaseRepository;
 		this.appDeployerDataRepository = appDeployerDataRepository;
 		this.deployerRepository = deployerRepository;
 		this.releaseAnalyzer = releaseAnalyzer;
 		this.appDeploymentRequestFactory = appDeploymentRequestFactory;
 		this.applicationManifestReader = applicationManifestReader;
+		this.cfApplicationManifestReader = cfApplicationManifestReader;
+		this.delegatingResourceLoader = delegatingResourceLoader;
 	}
 
 	public Release install(Release releaseInput) {
@@ -91,6 +107,8 @@ public class AppDeployerReleaseManager implements ReleaseManager {
 		// Deploy the application
 		List<? extends SpringCloudDeployerApplicationManifest> applicationSpecList = this.applicationManifestReader
 				.read(release.getManifest().getData());
+		List<? extends CFApplicationManifest> cfApplicationManifestList = this.cfApplicationManifestReader
+																				.read(release.getManifest().getData());
 		AppDeployer appDeployer = this.deployerRepository.findByNameRequired(release.getPlatformName())
 				.getAppDeployer();
 		Map<String, String> appNameDeploymentIdMap = new HashMap<>();
@@ -114,6 +132,22 @@ public class AppDeployerReleaseManager implements ReleaseManager {
 						appDeploymentRequest.toString(),
 						release.getPlatformName(),
 						e.getMessage()), e);
+			}
+		}
+		for (CFApplicationManifest cfApplicationManifest: cfApplicationManifestList) {
+			CFApplicationSpec spec = cfApplicationManifest.getSpec();
+			try {
+				Resource application = this.delegatingResourceLoader.getResource(AppDeploymentRequestFactory.getResourceLocation(spec.getResource(), spec.getVersion()));
+				Resource manifest = this.delegatingResourceLoader.getResource(spec.getManifest());
+				//ApplicationManifest.Builder manifest = ApplicationManifest.builder();
+				PushApplicationManifestRequest.Builder pushRequestBuilder = PushApplicationManifestRequest.builder();
+				List<ApplicationManifest> applicationManifestList = ApplicationManifestUtils.read(manifest.getFile().toPath());
+				pushRequestBuilder.manifests(applicationManifestList);
+				//todo: push application
+			}
+			catch (Exception e) {
+				throw new SkipperException(
+							"Could not load Resource " + spec.getResource() + ". Message = " + e.getMessage(), e);
 			}
 		}
 

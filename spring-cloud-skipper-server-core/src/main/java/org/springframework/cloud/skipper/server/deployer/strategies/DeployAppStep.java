@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
+import org.springframework.cloud.skipper.domain.CFApplicationManifestReader;
 import org.springframework.cloud.skipper.domain.Release;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationManifest;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationManifestReader;
@@ -54,14 +55,18 @@ public class DeployAppStep {
 
 	private final SpringCloudDeployerApplicationManifestReader applicationManifestReader;
 
+	private final CFApplicationManifestReader cfApplicationManifestReader;
+
 	public DeployAppStep(DeployerRepository deployerRepository, AppDeploymentRequestFactory appDeploymentRequestFactory,
 			AppDeployerDataRepository appDeployerDataRepository, ReleaseRepository releaseRepository,
-			SpringCloudDeployerApplicationManifestReader applicationManifestReader) {
+			SpringCloudDeployerApplicationManifestReader applicationManifestReader,
+			CFApplicationManifestReader cfApplicationManifestReader) {
 		this.deployerRepository = deployerRepository;
 		this.appDeploymentRequestFactory = appDeploymentRequestFactory;
 		this.appDeployerDataRepository = appDeployerDataRepository;
 		this.releaseRepository = releaseRepository;
 		this.applicationManifestReader = applicationManifestReader;
+		this.cfApplicationManifestReader = cfApplicationManifestReader;
 	}
 
 	@Transactional
