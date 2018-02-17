@@ -16,6 +16,7 @@
 package org.springframework.cloud.skipper.server.deployer;
 
 import org.springframework.cloud.skipper.domain.Release;
+import org.springframework.cloud.skipper.domain.SkipperManifestReader;
 
 /**
  * Manages the lifecycle of a releases.
@@ -60,5 +61,9 @@ public interface ReleaseManager {
 	 * @return the updated release
 	 */
 	Release status(Release release);
+
+	SkipperManifestReader getManifestReader();
+
+	String[] getSupportedManifestKinds();
 
 }

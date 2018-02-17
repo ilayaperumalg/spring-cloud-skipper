@@ -326,7 +326,7 @@ public class ReleaseService {
 	 * @param release the initial release object this data provided by the end user.
 	 */
 	protected void validateInitialRelease(Release release) {
-		this.deployerRepository.findByNameRequired(release.getPlatformName());
+		//this.deployerRepository.findByNameRequired(release.getPlatformName());
 	}
 
 	/**

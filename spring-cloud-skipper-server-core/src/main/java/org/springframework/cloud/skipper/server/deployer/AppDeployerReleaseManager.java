@@ -32,6 +32,8 @@ import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.skipper.SkipperException;
 import org.springframework.cloud.skipper.domain.Manifest;
 import org.springframework.cloud.skipper.domain.Release;
+import org.springframework.cloud.skipper.domain.SkipperManifestKind;
+import org.springframework.cloud.skipper.domain.SkipperManifestReader;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationManifest;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationManifestReader;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationSpec;
@@ -85,9 +87,18 @@ public class AppDeployerReleaseManager implements ReleaseManager {
 		this.applicationManifestReader = applicationManifestReader;
 	}
 
-	public Release install(Release releaseInput) {
-		Release release = this.releaseRepository.save(releaseInput);
-		logger.debug("Manifest = " + ArgumentSanitizer.sanitizeYml(releaseInput.getManifest().getData()));
+	public SkipperManifestReader getManifestReader() {
+		return this.applicationManifestReader;
+	}
+
+	public String[] getSupportedManifestKinds() {
+		return new String[] { SkipperManifestKind.SpringBootApp.name(),
+				SkipperManifestKind.SpringCloudDeployerApplication.name()};
+	}
+
+	public Release install(Release newRelease) {
+		Release release = this.releaseRepository.save(newRelease);
+		logger.debug("Manifest = " + ArgumentSanitizer.sanitizeYml(newRelease.getManifest().getData()));
 		// Deploy the application
 		List<? extends SpringCloudDeployerApplicationManifest> applicationSpecList = this.applicationManifestReader
 				.read(release.getManifest().getData());

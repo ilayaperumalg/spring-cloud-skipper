@@ -41,20 +41,21 @@ import org.springframework.cloud.skipper.SkipperException;
  * @author Mark Pollack
  * @author Ilayaperumal Gopinathan
  */
-public class SpringCloudDeployerApplicationManifestReader implements SkipperManifestReader {
+public class CFApplicationManifestReader implements SkipperManifestReader {
 
-	private final static Logger logger = LoggerFactory.getLogger(SpringCloudDeployerApplicationManifestReader.class);
+	private final static Logger logger = LoggerFactory.getLogger(CFApplicationManifestReader.class);
 
-	public List<SpringCloudDeployerApplicationManifest> read(String manifest) {
+	public List<CFApplicationSkipperManifest> read(String manifest) {
 		if (assertSupportedKinds(manifest)) {
-			List<SpringCloudDeployerApplicationManifest> applicationSpecs = new ArrayList<>();
+			List<CFApplicationSkipperManifest> applicationSpecs = new ArrayList<>();
 			YAMLMapper mapper = new YAMLMapper();
 			mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 			try {
-				MappingIterator<SpringCloudDeployerApplicationManifest> it = mapper.readerFor(
-						SpringCloudDeployerApplicationManifest.class).readValues(manifest);
+				MappingIterator<CFApplicationSkipperManifest> it = mapper
+																	.readerFor(CFApplicationSkipperManifest.class)
+																	.readValues(manifest);
 				while (it.hasNextValue()) {
-					SpringCloudDeployerApplicationManifest appKind = it.next();
+					CFApplicationSkipperManifest appKind = it.next();
 					applicationSpecs.add(appKind);
 				}
 			}
@@ -85,8 +86,7 @@ public class SpringCloudDeployerApplicationManifestReader implements SkipperMani
 	}
 
 	public String[] getSupportedKinds() {
-		return new String[] {SkipperManifestKind.SpringBootApp.name(),
-				SkipperManifestKind.SpringCloudDeployerApplication.name()};
+		return new String[] {SkipperManifestKind.CFApplication.name()};
 	}
 
 	private boolean assertSupportedKind(Object object) {
