@@ -52,6 +52,7 @@ import org.springframework.cloud.skipper.server.controller.SkipperErrorAttribute
 import org.springframework.cloud.skipper.server.controller.VersionInfoProperties;
 import org.springframework.cloud.skipper.server.deployer.AppDeployerReleaseManager;
 import org.springframework.cloud.skipper.server.deployer.AppDeploymentRequestFactory;
+import org.springframework.cloud.skipper.server.deployer.CFApplicationDeployer;
 import org.springframework.cloud.skipper.server.deployer.CFManifestDeployerReleaseManager;
 import org.springframework.cloud.skipper.server.deployer.CompositeReleaseManager;
 import org.springframework.cloud.skipper.server.deployer.ReleaseAnalyzer;
@@ -257,14 +258,24 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 	}
 
 	@Bean
+	public CFApplicationDeployer cfApplicationDeployer(CFApplicationManifestReader cfApplicationManifestReader,
+			PlatformCloudFoundryOperations platformCloudFoundryOperations,
+			DelegatingResourceLoader delegatingResourceLoader) {
+		return new CFApplicationDeployer(cfApplicationManifestReader, platformCloudFoundryOperations,
+				delegatingResourceLoader);
+	}
+
+	@Bean
 	public CFManifestDeployerReleaseManager cfManifestDeployerReleaseManager(ReleaseRepository releaseRepository,
 			AppDeployerDataRepository appDeployerDataRepository,
 			DeployerRepository deployerRepository,
 			ReleaseAnalyzer releaseAnalyzer,
 			CFApplicationManifestReader cfApplicationManifestReader,
-			DelegatingResourceLoader delegatingResourceLoader, PlatformCloudFoundryOperations platformCloudFoundryOperations) {
+			DelegatingResourceLoader delegatingResourceLoader,
+			PlatformCloudFoundryOperations platformCloudFoundryOperations,
+			CFApplicationDeployer cfApplicationDeployer) {
 		return new CFManifestDeployerReleaseManager(releaseRepository, appDeployerDataRepository, deployerRepository, releaseAnalyzer,
-				cfApplicationManifestReader, delegatingResourceLoader, platformCloudFoundryOperations);
+				cfApplicationManifestReader, delegatingResourceLoader, platformCloudFoundryOperations, cfApplicationDeployer);
 	}
 
 	@Bean
@@ -281,10 +292,9 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 	public DeleteStep deleteStep(ReleaseRepository releaseRepository,
 			DeployerRepository deployerRepository, SpringCloudDeployerApplicationManifestReader applicationManifestReader,
 			CFApplicationManifestReader cfApplicationManifestReader,
-			PlatformCloudFoundryOperations platformCloudFoundryOperations,
-			DelegatingResourceLoader delegatingResourceLoader) {
+			PlatformCloudFoundryOperations platformCloudFoundryOperations) {
 		return new DeleteStep(releaseRepository, deployerRepository, applicationManifestReader,
-				cfApplicationManifestReader, platformCloudFoundryOperations, delegatingResourceLoader);
+				cfApplicationManifestReader, platformCloudFoundryOperations);
 	}
 
 	@Bean
@@ -302,23 +312,23 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 			SpringCloudDeployerApplicationManifestReader applicationManifestReader,
 			CFApplicationManifestReader cfApplicationManifestReader,
 			PlatformCloudFoundryOperations platformCloudFoundryOperations,
-			DelegatingResourceLoader delegatingResourceLoader) {
+			DelegatingResourceLoader delegatingResourceLoader,
+			CFApplicationDeployer cfApplicationDeployer) {
 		return new HealthCheckStep(appDeployerDataRepository, deployerRepository, healthCheckProperties,
 				applicationManifestReader, cfApplicationManifestReader, platformCloudFoundryOperations,
-				delegatingResourceLoader);
+				delegatingResourceLoader, cfApplicationDeployer);
 	}
 
 	@Bean
-	public DeployAppStep DeployAppStep(DeployerRepository deployerRepository,
-			AppDeploymentRequestFactory appDeploymentRequestFactory,
+	public DeployAppStep DeployAppStep(DeployerRepository deployerRepository, AppDeploymentRequestFactory appDeploymentRequestFactory,
 			AppDeployerDataRepository appDeployerDataRepository, ReleaseRepository releaseRepository,
 			SpringCloudDeployerApplicationManifestReader applicationManifestReader,
 			CFApplicationManifestReader cfApplicationManifestReader,
 			PlatformCloudFoundryOperations platformCloudFoundryOperations,
-			DelegatingResourceLoader delegatingResourceLoader) {
+			CFApplicationDeployer cfApplicationDeployer) {
 		return new DeployAppStep(deployerRepository, appDeploymentRequestFactory, appDeployerDataRepository,
-				releaseRepository, applicationManifestReader, cfApplicationManifestReader,
-				platformCloudFoundryOperations, delegatingResourceLoader);
+				releaseRepository, applicationManifestReader, cfApplicationManifestReader, platformCloudFoundryOperations,
+				cfApplicationDeployer);
 	}
 
 	@Bean

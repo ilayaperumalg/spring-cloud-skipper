@@ -15,36 +15,27 @@
  */
 package org.springframework.cloud.skipper.server.deployer.strategies;
 
-import java.io.File;
 import java.util.List;
 import java.util.Map;
 
 import org.cloudfoundry.operations.applications.ApplicationManifest;
-import org.cloudfoundry.operations.applications.ApplicationManifestUtils;
 import org.cloudfoundry.operations.applications.DeleteApplicationRequest;
-import org.cloudfoundry.operations.applications.Docker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.springframework.cloud.deployer.resource.docker.DockerResource;
-import org.springframework.cloud.deployer.resource.support.DelegatingResourceLoader;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.app.AppStatus;
 import org.springframework.cloud.deployer.spi.app.DeploymentState;
-import org.springframework.cloud.skipper.SkipperException;
 import org.springframework.cloud.skipper.deployer.cloudfoundry.PlatformCloudFoundryOperations;
 import org.springframework.cloud.skipper.domain.CFApplicationManifestReader;
-import org.springframework.cloud.skipper.domain.CFApplicationSkipperManifest;
-import org.springframework.cloud.skipper.domain.CFApplicationSpec;
 import org.springframework.cloud.skipper.domain.Release;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationManifestReader;
 import org.springframework.cloud.skipper.domain.Status;
 import org.springframework.cloud.skipper.domain.StatusCode;
-import org.springframework.cloud.skipper.server.deployer.AppDeploymentRequestFactory;
+import org.springframework.cloud.skipper.server.deployer.CFApplicationManifestUtils;
 import org.springframework.cloud.skipper.server.domain.AppDeployerData;
 import org.springframework.cloud.skipper.server.repository.DeployerRepository;
 import org.springframework.cloud.skipper.server.repository.ReleaseRepository;
-import org.springframework.core.io.Resource;
 
 /**
  * Responsible for deleting the provided list of applications and updating the status of
@@ -65,19 +56,15 @@ public class DeleteStep {
 
 	private final PlatformCloudFoundryOperations platformCloudFoundryOperations;
 
-	private final DelegatingResourceLoader delegatingResourceLoader;
-
 	public DeleteStep(ReleaseRepository releaseRepository, DeployerRepository deployerRepository,
 			SpringCloudDeployerApplicationManifestReader applicationManifestReader,
 			CFApplicationManifestReader cfApplicationManifestReader,
-			PlatformCloudFoundryOperations platformCloudFoundryOperations,
-			DelegatingResourceLoader delegatingResourceLoader) {
+			PlatformCloudFoundryOperations platformCloudFoundryOperations) {
 		this.releaseRepository = releaseRepository;
 		this.deployerRepository = deployerRepository;
 		this.applicationManifestReader = applicationManifestReader;
 		this.cfApplicationManifestReader = cfApplicationManifestReader;
 		this.platformCloudFoundryOperations = platformCloudFoundryOperations;
-		this.delegatingResourceLoader = delegatingResourceLoader;
 	}
 
 	public Release delete(Release release, AppDeployerData existingAppDeployerData,
@@ -104,7 +91,7 @@ public class DeleteStep {
 			}
 		}
 		else if (this.cfApplicationManifestReader.assertSupportedKinds(releaseManifest)) {
-			ApplicationManifest applicationManifest = getApplicationManifest(release);
+			ApplicationManifest applicationManifest = CFApplicationManifestUtils.getCFManifest(release);
 			String applicationName = applicationManifest.getName();
 			DeleteApplicationRequest deleteApplicationRequest = DeleteApplicationRequest.builder().name(applicationName)
 					.build();
@@ -121,46 +108,5 @@ public class DeleteStep {
 		release.getInfo().setDescription("Delete complete");
 		this.releaseRepository.save(release);
 		return release;
-	}
-
-	public ApplicationManifest getApplicationManifest(Release release) {
-		List<? extends CFApplicationSkipperManifest> cfApplicationManifestList = this.cfApplicationManifestReader
-				.read(release.getManifest()
-						.getData());
-		for (CFApplicationSkipperManifest cfApplicationSkipperManifest : cfApplicationManifestList) {
-			CFApplicationSpec spec = cfApplicationSkipperManifest.getSpec();
-			try {
-				Resource application = this.delegatingResourceLoader.getResource(
-						AppDeploymentRequestFactory.getResourceLocation(spec.getResource(), spec.getVersion()));
-				Resource manifest = this.delegatingResourceLoader.getResource(spec.getManifest());
-				File manifestYaml = manifest.getFile();
-				List<ApplicationManifest> applicationManifestList = ApplicationManifestUtils
-						.read(manifestYaml.toPath());
-				// todo: support multiple application manifest
-				if (applicationManifestList.size() > 1) {
-					throw new IllegalArgumentException("Multiple manifest YAML entries are not supported yet");
-				}
-				ApplicationManifest applicationManifest = applicationManifestList.get(0);
-				ApplicationManifest.Builder applicationManifestBuilder = ApplicationManifest.builder()
-						.from(applicationManifest);
-				if (!applicationManifest.getName().endsWith("-v" + release.getVersion())) {
-					applicationManifestBuilder
-							.name(String.format("%s-v%s", applicationManifest.getName(), release.getVersion()));
-				}
-				if (application != null && application instanceof DockerResource) {
-					String uriString = application.getURI().toString();
-					applicationManifestBuilder.docker(
-							Docker.builder().image(uriString.substring(uriString.indexOf("docker:"))).build());
-				}
-				else {
-					applicationManifestBuilder.path(application.getFile().toPath());
-				}
-				return applicationManifestBuilder.build();
-			}
-			catch (Exception e) {
-				throw new SkipperException(e.getMessage());
-			}
-		}
-		return null;
 	}
 }

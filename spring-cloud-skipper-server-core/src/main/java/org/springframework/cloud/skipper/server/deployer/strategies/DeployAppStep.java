@@ -15,9 +15,6 @@
  */
 package org.springframework.cloud.skipper.server.deployer.strategies;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,28 +24,21 @@ import java.util.function.Predicate;
 
 import org.cloudfoundry.AbstractCloudFoundryException;
 import org.cloudfoundry.operations.applications.ApplicationManifest;
-import org.cloudfoundry.operations.applications.ApplicationManifestUtils;
-import org.cloudfoundry.operations.applications.Docker;
 import org.cloudfoundry.operations.applications.PushApplicationManifestRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.yaml.snakeyaml.Yaml;
 
-import org.springframework.cloud.deployer.resource.docker.DockerResource;
-import org.springframework.cloud.deployer.resource.support.DelegatingResourceLoader;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
-import org.springframework.cloud.skipper.SkipperException;
 import org.springframework.cloud.skipper.deployer.cloudfoundry.PlatformCloudFoundryOperations;
 import org.springframework.cloud.skipper.domain.CFApplicationManifestReader;
-import org.springframework.cloud.skipper.domain.CFApplicationSkipperManifest;
-import org.springframework.cloud.skipper.domain.CFApplicationSpec;
 import org.springframework.cloud.skipper.domain.Release;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationManifest;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationManifestReader;
 import org.springframework.cloud.skipper.domain.Status;
 import org.springframework.cloud.skipper.domain.StatusCode;
 import org.springframework.cloud.skipper.server.deployer.AppDeploymentRequestFactory;
+import org.springframework.cloud.skipper.server.deployer.CFApplicationDeployer;
 import org.springframework.cloud.skipper.server.deployer.CFManifestDeployerReleaseManager;
 import org.springframework.cloud.skipper.server.deployer.ReleaseAnalysisReport;
 import org.springframework.cloud.skipper.server.domain.AppDeployerData;
@@ -56,7 +46,6 @@ import org.springframework.cloud.skipper.server.repository.AppDeployerDataReposi
 import org.springframework.cloud.skipper.server.repository.DeployerRepository;
 import org.springframework.cloud.skipper.server.repository.ReleaseRepository;
 import org.springframework.cloud.skipper.server.util.ArgumentSanitizer;
-import org.springframework.core.io.Resource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,6 +55,7 @@ import org.springframework.transaction.annotation.Transactional;
  * replacing release. Step operates in it's own transaction, catches all exceptions so
  * always commits.
  * @author Mark Pollack
+ * @author Ilayaperumal Gopinathan
  */
 public class DeployAppStep {
 
@@ -85,14 +75,14 @@ public class DeployAppStep {
 
 	private final PlatformCloudFoundryOperations platformCloudFoundryOperations;
 
-	private final DelegatingResourceLoader delegatingResourceLoader;
+	private final CFApplicationDeployer cfApplicationDeployer;
 
 	public DeployAppStep(DeployerRepository deployerRepository, AppDeploymentRequestFactory appDeploymentRequestFactory,
 			AppDeployerDataRepository appDeployerDataRepository, ReleaseRepository releaseRepository,
 			SpringCloudDeployerApplicationManifestReader applicationManifestReader,
 			CFApplicationManifestReader cfApplicationManifestReader,
 			PlatformCloudFoundryOperations platformCloudFoundryOperations,
-			DelegatingResourceLoader delegatingResourceLoader) {
+			CFApplicationDeployer cfApplicationDeployer) {
 		this.deployerRepository = deployerRepository;
 		this.appDeploymentRequestFactory = appDeploymentRequestFactory;
 		this.appDeployerDataRepository = appDeployerDataRepository;
@@ -100,7 +90,7 @@ public class DeployAppStep {
 		this.applicationManifestReader = applicationManifestReader;
 		this.cfApplicationManifestReader = cfApplicationManifestReader;
 		this.platformCloudFoundryOperations = platformCloudFoundryOperations;
-		this.delegatingResourceLoader = delegatingResourceLoader;
+		this.cfApplicationDeployer = cfApplicationDeployer;
 	}
 
 	@Transactional
@@ -146,19 +136,12 @@ public class DeployAppStep {
 	}
 
 	private void deployCFApp(Release replacingRelease) {
-		ApplicationManifest applicationManifest = getApplicationManifest(replacingRelease);
+		ApplicationManifest applicationManifest = this.cfApplicationDeployer.getCFApplicationManifest(replacingRelease);
 		logger.debug("Manifest = " + ArgumentSanitizer.sanitizeYml(replacingRelease.getManifest().getData()));
 		// Deploy the application
-		Map<String, String> appNameDeploymentIdMap = new HashMap<>();
-		Yaml yaml = new Yaml();
-		File manifestYaml = getCFManifestFile(replacingRelease);
-		try {
-			appNameDeploymentIdMap
-					.put(applicationManifest.getName(), yaml.dump(yaml.load(new FileInputStream(manifestYaml))));
-		}
-		catch (IOException e) {
-			throw new IllegalArgumentException(e);
-		}
+		String applicationName = applicationManifest.getName();
+		Map<String, String> appDeploymentData = new HashMap<>();
+		appDeploymentData.put(applicationManifest.getName(), applicationManifest.toString());
 		this.platformCloudFoundryOperations.getCloudFoundryOperations(replacingRelease.getPlatformName())
 				.applications().pushManifest(
 				PushApplicationManifestRequest.builder()
@@ -166,19 +149,18 @@ public class DeployAppStep {
 						.stagingTimeout(Duration.ofMinutes(15L))
 						.startupTimeout(Duration.ofMinutes(5L))
 						.build())
-				.doOnSuccess(v -> logger.info("Done uploading bits for {}", applicationManifest.getName()))
+				.doOnSuccess(v -> logger.info("Done uploading bits for {}", applicationName))
 				.doOnError(e -> logger.error(
-						String.format("Error creating app %s.  Exception Message %s", applicationManifest.getName(),
+						String.format("Error creating app %s.  Exception Message %s", applicationName,
 								e.getMessage())))
 				.timeout(Duration.ofSeconds(360L))
 				.doOnTerminate((item, error) -> {
 					if (error == null) {
-						logger.info("Successfully deployed {}", applicationManifest.getName());
+						logger.info("Successfully deployed {}", applicationName);
 						AppDeployerData appDeployerData = new AppDeployerData();
 						appDeployerData.setReleaseName(replacingRelease.getName());
 						appDeployerData.setReleaseVersion(replacingRelease.getVersion());
-						appDeployerData.setDeploymentDataUsingMap(appNameDeploymentIdMap);
-
+						appDeployerData.setDeploymentDataUsingMap(appDeploymentData);
 						this.appDeployerDataRepository.save(appDeployerData);
 					}
 					else if (isNotFoundError().test(error)) {
@@ -186,74 +168,11 @@ public class DeployAppStep {
 											+ error.getMessage());
 					}
 					else {
-						logger.error(String.format("Failed to deploy %s", applicationManifest.getName()));
+						logger.error(String.format("Failed to deploy %s", applicationName));
 					}
 				})
 				.block();
 	}
-
-	public File getCFManifestFile(Release release) {
-		List<? extends CFApplicationSkipperManifest> cfApplicationManifestList = this.cfApplicationManifestReader
-																						.read(release.getManifest()
-																									.getData());
-		for (CFApplicationSkipperManifest cfApplicationSkipperManifest : cfApplicationManifestList) {
-			CFApplicationSpec spec = cfApplicationSkipperManifest.getSpec();
-			try {
-				Resource manifest = this.delegatingResourceLoader.getResource(spec.getManifest());
-				return manifest.getFile();
-			}
-			catch (IOException e) {
-				throw new IllegalArgumentException(e);
-			}
-		}
-		return null;
-	}
-
-	public ApplicationManifest getApplicationManifest(Release release) {
-		List<? extends CFApplicationSkipperManifest> cfApplicationManifestList = this.cfApplicationManifestReader
-																						.read(release.getManifest()
-																									.getData());
-		for (CFApplicationSkipperManifest cfApplicationSkipperManifest : cfApplicationManifestList) {
-			CFApplicationSpec spec = cfApplicationSkipperManifest.getSpec();
-			try {
-				Resource application = this.delegatingResourceLoader.getResource(
-						AppDeploymentRequestFactory.getResourceLocation(spec.getResource(), spec.getVersion()));
-				Resource manifest = this.delegatingResourceLoader.getResource(spec.getManifest());
-				File manifestYaml = manifest.getFile();
-				List<ApplicationManifest> applicationManifestList = ApplicationManifestUtils
-																			.read(manifestYaml.toPath());
-				// todo: support multiple application manifest
-				if (applicationManifestList.size() > 1) {
-					throw new IllegalArgumentException("Multiple manifest YAML entries are not supported yet");
-				}
-				ApplicationManifest applicationManifest = applicationManifestList.get(0);
-				ApplicationManifest.Builder applicationManifestBuilder = ApplicationManifest.builder()
-																				.from(applicationManifest);
-				if (!applicationManifest.getName().endsWith("-v" + release.getVersion())) {
-					applicationManifestBuilder
-							.name(String.format("%s-v%s", applicationManifest.getName(), release.getVersion()));
-				}
-				if (application != null && application instanceof DockerResource) {
-					String uriString = application.getURI().toString();
-					applicationManifestBuilder.docker(
-							Docker.builder().image(uriString.substring(uriString.indexOf("docker:"))).build());
-				}
-				else {
-					applicationManifestBuilder.path(application.getFile().toPath());
-				}
-				return applicationManifestBuilder.build();
-			}
-			catch (Exception e) {
-				throw new SkipperException(e.getMessage());
-			}
-		}
-		return null;
-	}
-
-	public List<CFApplicationSkipperManifest> getReleaseManifest(Release release) {
-		return this.cfApplicationManifestReader.read(release.getManifest().getData());
-	}
-
 
 	public Predicate<Throwable> isNotFoundError() {
 		return t -> t instanceof AbstractCloudFoundryException

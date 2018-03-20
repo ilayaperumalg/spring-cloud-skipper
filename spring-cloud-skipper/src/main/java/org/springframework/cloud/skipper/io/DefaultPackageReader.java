@@ -54,7 +54,7 @@ public class DefaultPackageReader implements PackageReader {
 			throw new IllegalArgumentException("Could not process files in path " + packageDirectory.getPath() + ". " + e.getMessage(), e);
 		}
 		Package pkg = new Package();
-		List<FileHolder> fileHolder = new ArrayList<>();
+		List<FileHolder> fileHolders = new ArrayList<>();
 		// Iterate over all files and "deserialize" the package.
 		for (File file : files) {
 			// Package metadata
@@ -64,7 +64,7 @@ public class DefaultPackageReader implements PackageReader {
 			}
 
 			if (file.getName().endsWith("manifest.yaml") || file.getName().endsWith("manifest.yml")) {
-				fileHolder.add(loadManifestFile(file));
+				fileHolders.add(loadManifestFile(file));
 				continue;
 			}
 
@@ -91,6 +91,9 @@ public class DefaultPackageReader implements PackageReader {
 				}
 				pkg.setDependencies(dependencies);
 			}
+		}
+		if (!fileHolders.isEmpty()) {
+			pkg.setFileHolders(fileHolders);
 		}
 		return pkg;
 	}
