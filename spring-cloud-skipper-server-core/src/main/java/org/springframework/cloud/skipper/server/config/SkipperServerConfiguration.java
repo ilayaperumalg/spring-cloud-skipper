@@ -36,6 +36,8 @@ import org.springframework.cloud.deployer.resource.maven.MavenProperties;
 import org.springframework.cloud.deployer.resource.maven.MavenResourceLoader;
 import org.springframework.cloud.deployer.resource.support.DelegatingResourceLoader;
 import org.springframework.cloud.deployer.resource.support.LRUCleaningResourceLoaderBeanPostProcessor;
+import org.springframework.cloud.skipper.deployer.cloudfoundry.CloudFoundryPlatformProperties;
+import org.springframework.cloud.skipper.deployer.cloudfoundry.PlatformCloudFoundryOperations;
 import org.springframework.cloud.skipper.domain.CFApplicationManifestReader;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationManifestReader;
 import org.springframework.cloud.skipper.io.DefaultPackageReader;
@@ -50,8 +52,9 @@ import org.springframework.cloud.skipper.server.controller.SkipperErrorAttribute
 import org.springframework.cloud.skipper.server.controller.VersionInfoProperties;
 import org.springframework.cloud.skipper.server.deployer.AppDeployerReleaseManager;
 import org.springframework.cloud.skipper.server.deployer.AppDeploymentRequestFactory;
+import org.springframework.cloud.skipper.server.deployer.CFManifestDeployerReleaseManager;
+import org.springframework.cloud.skipper.server.deployer.CompositeReleaseManager;
 import org.springframework.cloud.skipper.server.deployer.ReleaseAnalyzer;
-import org.springframework.cloud.skipper.server.deployer.ReleaseManager;
 import org.springframework.cloud.skipper.server.deployer.strategies.DeleteStep;
 import org.springframework.cloud.skipper.server.deployer.strategies.DeployAppStep;
 import org.springframework.cloud.skipper.server.deployer.strategies.HandleHealthCheckStep;
@@ -99,7 +102,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  */
 @Configuration
 @EnableConfigurationProperties({ SkipperServerProperties.class, VersionInfoProperties.class,
-		LocalPlatformProperties.class, MavenConfigurationProperties.class, HealthCheckProperties.class })
+		LocalPlatformProperties.class, CloudFoundryPlatformProperties.class, MavenConfigurationProperties.class, HealthCheckProperties.class })
 @EntityScan({ "org.springframework.cloud.skipper.domain",
 		"org.springframework.cloud.skipper.server.domain" })
 @EnableMapRepositories(basePackages = "org.springframework.cloud.skipper.server.repository")
@@ -197,7 +200,7 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 	public ReleaseReportService releaseReportService(PackageMetadataRepository packageMetadataRepository,
 			ReleaseRepository releaseRepository,
 			PackageService packageService,
-			ReleaseManager releaseManager) {
+			CompositeReleaseManager releaseManager) {
 		return new ReleaseReportService(packageMetadataRepository, releaseRepository, packageService, releaseManager);
 	}
 
@@ -205,7 +208,7 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 	public ReleaseService releaseService(PackageMetadataRepository packageMetadataRepository,
 			ReleaseRepository releaseRepository,
 			PackageService packageService,
-			ReleaseManager releaseManager,
+			CompositeReleaseManager releaseManager,
 			DeployerRepository deployerRepository,
 			PackageMetadataService packageMetadataService) {
 		return new ReleaseService(packageMetadataRepository, releaseRepository,
@@ -214,7 +217,7 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 
 	@Bean
 	@ConditionalOnProperty(prefix = "spring.cloud.skipper.server", name = "enableReleaseStateUpdateService", matchIfMissing = true)
-	public ReleaseStateUpdateService releaseStateUpdateService(ReleaseManager releaseManager,
+	public ReleaseStateUpdateService releaseStateUpdateService(CompositeReleaseManager releaseManager,
 			ReleaseRepository releaseRepository) {
 		return new ReleaseStateUpdateService(releaseManager, releaseRepository);
 	}
@@ -236,12 +239,32 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 			DeployerRepository deployerRepository,
 			ReleaseAnalyzer releaseAnalyzer,
 			AppDeploymentRequestFactory appDeploymentRequestFactory,
-			SpringCloudDeployerApplicationManifestReader applicationManifestReader,
-			CFApplicationManifestReader cfApplicationManifestReader,
-			DelegatingResourceLoader delegatingResourceLoader) {
+			SpringCloudDeployerApplicationManifestReader applicationManifestReader) {
 		return new AppDeployerReleaseManager(releaseRepository, appDeployerDataRepository, deployerRepository,
-				releaseAnalyzer, appDeploymentRequestFactory, applicationManifestReader, cfApplicationManifestReader,
-				delegatingResourceLoader);
+				releaseAnalyzer, appDeploymentRequestFactory, applicationManifestReader);
+	}
+
+	@Bean
+	public CompositeReleaseManager compositeReleaseManager(AppDeployerReleaseManager appDeployerReleaseManager,
+			CFManifestDeployerReleaseManager cfManifestDeployerReleaseManager,
+			SpringCloudDeployerApplicationManifestReader applicationManifestReader, CFApplicationManifestReader cfApplicationManifestReader) {
+		return new CompositeReleaseManager(appDeployerReleaseManager, cfManifestDeployerReleaseManager, applicationManifestReader, cfApplicationManifestReader);
+	}
+
+	@Bean
+	public PlatformCloudFoundryOperations platformCloudFoundryOperations(CloudFoundryPlatformProperties cloudFoundryPlatformProperties) {
+		return new PlatformCloudFoundryOperations(cloudFoundryPlatformProperties);
+	}
+
+	@Bean
+	public CFManifestDeployerReleaseManager cfManifestDeployerReleaseManager(ReleaseRepository releaseRepository,
+			AppDeployerDataRepository appDeployerDataRepository,
+			DeployerRepository deployerRepository,
+			ReleaseAnalyzer releaseAnalyzer,
+			CFApplicationManifestReader cfApplicationManifestReader,
+			DelegatingResourceLoader delegatingResourceLoader, PlatformCloudFoundryOperations platformCloudFoundryOperations) {
+		return new CFManifestDeployerReleaseManager(releaseRepository, appDeployerDataRepository, deployerRepository, releaseAnalyzer,
+				cfApplicationManifestReader, delegatingResourceLoader, platformCloudFoundryOperations);
 	}
 
 	@Bean
@@ -256,8 +279,12 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 
 	@Bean
 	public DeleteStep deleteStep(ReleaseRepository releaseRepository,
-			DeployerRepository deployerRepository) {
-		return new DeleteStep(releaseRepository, deployerRepository);
+			DeployerRepository deployerRepository, SpringCloudDeployerApplicationManifestReader applicationManifestReader,
+			CFApplicationManifestReader cfApplicationManifestReader,
+			PlatformCloudFoundryOperations platformCloudFoundryOperations,
+			DelegatingResourceLoader delegatingResourceLoader) {
+		return new DeleteStep(releaseRepository, deployerRepository, applicationManifestReader,
+				cfApplicationManifestReader, platformCloudFoundryOperations, delegatingResourceLoader);
 	}
 
 	@Bean
@@ -271,8 +298,14 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 	@Bean
 	public HealthCheckStep healthCheckStep(AppDeployerDataRepository appDeployerDataRepository,
 			DeployerRepository deployerRepository,
-			HealthCheckProperties healthCheckProperties) {
-		return new HealthCheckStep(appDeployerDataRepository, deployerRepository, healthCheckProperties);
+			HealthCheckProperties healthCheckProperties,
+			SpringCloudDeployerApplicationManifestReader applicationManifestReader,
+			CFApplicationManifestReader cfApplicationManifestReader,
+			PlatformCloudFoundryOperations platformCloudFoundryOperations,
+			DelegatingResourceLoader delegatingResourceLoader) {
+		return new HealthCheckStep(appDeployerDataRepository, deployerRepository, healthCheckProperties,
+				applicationManifestReader, cfApplicationManifestReader, platformCloudFoundryOperations,
+				delegatingResourceLoader);
 	}
 
 	@Bean
@@ -280,20 +313,25 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 			AppDeploymentRequestFactory appDeploymentRequestFactory,
 			AppDeployerDataRepository appDeployerDataRepository, ReleaseRepository releaseRepository,
 			SpringCloudDeployerApplicationManifestReader applicationManifestReader,
-			CFApplicationManifestReader cfApplicationManifestReader) {
+			CFApplicationManifestReader cfApplicationManifestReader,
+			PlatformCloudFoundryOperations platformCloudFoundryOperations,
+			DelegatingResourceLoader delegatingResourceLoader) {
 		return new DeployAppStep(deployerRepository, appDeploymentRequestFactory, appDeployerDataRepository,
-				releaseRepository, applicationManifestReader, cfApplicationManifestReader);
+				releaseRepository, applicationManifestReader, cfApplicationManifestReader,
+				platformCloudFoundryOperations, delegatingResourceLoader);
 	}
 
 	@Bean
 	public HandleHealthCheckStep healthCheckAndDeleteStep(ReleaseRepository releaseRepository,
 			AppDeployerDataRepository appDeployerDataRepository,
 			DeleteStep deleteStep,
-			HealthCheckProperties healthCheckProperties) {
+			HealthCheckProperties healthCheckProperties,
+			CompositeReleaseManager releaseManager) {
 		return new HandleHealthCheckStep(releaseRepository,
 				appDeployerDataRepository,
 				deleteStep,
-				healthCheckProperties);
+				healthCheckProperties,
+				releaseManager);
 	}
 
 	@Bean(name = SKIPPER_EXECUTOR)

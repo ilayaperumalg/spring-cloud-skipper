@@ -18,7 +18,7 @@ package org.springframework.cloud.skipper.domain;
 /**
  * Specification to handle applications that can be deployed into target platforms based
  * on their Spring Cloud Deployer implementations. Contained inside a
- * {@link CFApplicationManifest} instance.
+ * {@link CFApplicationSkipperManifest} instance.
  *
  * @author Ilayaperumal Gopinathan
  */

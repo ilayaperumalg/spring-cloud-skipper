@@ -17,6 +17,7 @@ package org.springframework.cloud.skipper.domain;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -40,21 +41,21 @@ import org.springframework.cloud.skipper.SkipperException;
  * @author Mark Pollack
  * @author Ilayaperumal Gopinathan
  */
-public class CFApplicationManifestReader {
+public class CFApplicationManifestReader implements SkipperManifestReader {
 
 	private final static Logger logger = LoggerFactory.getLogger(CFApplicationManifestReader.class);
 
-	public List<CFApplicationManifest> read(String manifest) {
+	public List<CFApplicationSkipperManifest> read(String manifest) {
 		if (assertSupportedKinds(manifest)) {
-			List<CFApplicationManifest> applicationSpecs = new ArrayList<>();
+			List<CFApplicationSkipperManifest> applicationSpecs = new ArrayList<>();
 			YAMLMapper mapper = new YAMLMapper();
 			mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 			try {
-				MappingIterator<CFApplicationManifest> it = mapper
-																	.readerFor(CFApplicationManifest.class)
+				MappingIterator<CFApplicationSkipperManifest> it = mapper
+																	.readerFor(CFApplicationSkipperManifest.class)
 																	.readValues(manifest);
 				while (it.hasNextValue()) {
-					CFApplicationManifest appKind = it.next();
+					CFApplicationSkipperManifest appKind = it.next();
 					applicationSpecs.add(appKind);
 				}
 			}
@@ -72,7 +73,7 @@ public class CFApplicationManifestReader {
 		return Collections.emptyList();
 	}
 
-	private boolean assertSupportedKinds(String manifest) {
+	public boolean assertSupportedKinds(String manifest) {
 		Yaml yaml = new Yaml();
 		Iterable<Object> object = yaml.loadAll(manifest);
 		for (Object o : object) {
@@ -82,6 +83,10 @@ public class CFApplicationManifestReader {
 			}
 		}
 		return false;
+	}
+
+	public String[] getSupportedKinds() {
+		return new String[] {SkipperManifestKind.CFApplication.name()};
 	}
 
 	private boolean assertSupportedKind(Object object) {
@@ -98,7 +103,7 @@ public class CFApplicationManifestReader {
 		Object kindObject = manifestAsMap.get("kind");
 		if (kindObject instanceof String) {
 			String kind = (String) kindObject;
-			if (kind.equalsIgnoreCase("CFApplication")) {
+			if (Arrays.asList(getSupportedKinds()).contains(kind)) {
 				logger.debug("Found supported kind " + kind);
 				return true;
 			}

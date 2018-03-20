@@ -35,7 +35,7 @@ import org.springframework.cloud.skipper.SkipperException;
  *
  * @author Ilayaperumal Gopinathan
  */
-public class CFApplicationManifest {
+public class CFApplicationSkipperManifest {
 
 	public static final String API_VERSION_STRING = "apiVersion";
 
@@ -53,7 +53,7 @@ public class CFApplicationManifest {
 
 	private Map<String, String> metadata;
 
-	public CFApplicationManifest() {
+	public CFApplicationSkipperManifest() {
 	}
 
 	public CFApplicationSpec getSpec() {
@@ -95,7 +95,7 @@ public class CFApplicationManifest {
 	 */
 	public String getApplicationName() {
 		if (!this.metadata.containsKey("name")) {
-			throw new SkipperException("CFApplicationManifest must define a 'name' property in the metadata");
+			throw new SkipperException("CFApplicationSkipperManifest must define a 'name' property in the metadata");
 		}
 		return this.metadata.get("name");
 	}
