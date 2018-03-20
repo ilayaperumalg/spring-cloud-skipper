@@ -146,8 +146,7 @@ public class HealthCheckStep {
 
 	public ApplicationManifest getApplicationManifest(Release release) {
 		List<? extends CFApplicationSkipperManifest> cfApplicationManifestList = this.cfApplicationManifestReader
-				.read(release.getManifest()
-						.getData());
+				.read(release.getManifest().getData());
 		for (CFApplicationSkipperManifest cfApplicationSkipperManifest : cfApplicationManifestList) {
 			CFApplicationSpec spec = cfApplicationSkipperManifest.getSpec();
 			try {

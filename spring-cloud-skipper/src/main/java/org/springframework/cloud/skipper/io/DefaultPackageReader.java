@@ -31,6 +31,7 @@ import org.yaml.snakeyaml.representer.Representer;
 import org.zeroturnaround.zip.commons.FileUtils;
 
 import org.springframework.cloud.skipper.domain.ConfigValues;
+import org.springframework.cloud.skipper.domain.FileHolder;
 import org.springframework.cloud.skipper.domain.Package;
 import org.springframework.cloud.skipper.domain.PackageMetadata;
 import org.springframework.cloud.skipper.domain.Template;
@@ -53,12 +54,17 @@ public class DefaultPackageReader implements PackageReader {
 			throw new IllegalArgumentException("Could not process files in path " + packageDirectory.getPath() + ". " + e.getMessage(), e);
 		}
 		Package pkg = new Package();
+		List<FileHolder> fileHolder = new ArrayList<>();
 		// Iterate over all files and "deserialize" the package.
 		for (File file : files) {
 			// Package metadata
 			if (file.getName().equalsIgnoreCase("package.yaml") || file.getName().equalsIgnoreCase("package.yml")) {
-
 				pkg.setMetadata(loadPackageMetadata(file));
+				continue;
+			}
+
+			if (file.getName().endsWith("manifest.yaml") || file.getName().endsWith("manifest.yml")) {
+				fileHolder.add(loadManifestFile(file));
 				continue;
 			}
 
@@ -133,6 +139,15 @@ public class DefaultPackageReader implements PackageReader {
 			throw new IllegalArgumentException("Could read values file " + file.getAbsoluteFile(), e);
 		}
 		return configValues;
+	}
+
+	private FileHolder loadManifestFile(File file) {
+		try {
+			return new FileHolder(file.getName(), Files.readAllBytes(file.toPath()));
+		}
+		catch (IOException e) {
+			throw new IllegalArgumentException("Could read values file " + file.getAbsoluteFile(), e);
+		}
 	}
 
 	private PackageMetadata loadPackageMetadata(File file) {

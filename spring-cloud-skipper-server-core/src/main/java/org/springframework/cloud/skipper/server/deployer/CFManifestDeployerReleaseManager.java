@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import org.cloudfoundry.AbstractCloudFoundryException;
@@ -35,11 +34,9 @@ import org.cloudfoundry.operations.applications.Docker;
 import org.cloudfoundry.operations.applications.GetApplicationRequest;
 import org.cloudfoundry.operations.applications.InstanceDetail;
 import org.cloudfoundry.operations.applications.PushApplicationManifestRequest;
-import org.cloudfoundry.util.DelayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import org.springframework.cloud.deployer.resource.docker.DockerResource;
@@ -52,6 +49,7 @@ import org.springframework.cloud.skipper.deployer.cloudfoundry.PlatformCloudFoun
 import org.springframework.cloud.skipper.domain.CFApplicationManifestReader;
 import org.springframework.cloud.skipper.domain.CFApplicationSkipperManifest;
 import org.springframework.cloud.skipper.domain.CFApplicationSpec;
+import org.springframework.cloud.skipper.domain.Manifest;
 import org.springframework.cloud.skipper.domain.Release;
 import org.springframework.cloud.skipper.domain.SkipperManifestKind;
 import org.springframework.cloud.skipper.domain.SkipperManifestReader;
@@ -63,6 +61,7 @@ import org.springframework.cloud.skipper.server.repository.AppDeployerDataReposi
 import org.springframework.cloud.skipper.server.repository.DeployerRepository;
 import org.springframework.cloud.skipper.server.repository.ReleaseRepository;
 import org.springframework.cloud.skipper.server.util.ArgumentSanitizer;
+import org.springframework.cloud.skipper.server.util.ManifestUtils;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 
@@ -250,11 +249,16 @@ public class CFManifestDeployerReleaseManager implements ReleaseManager {
 //		String replacingApplicationName = replacingApplicationManifest.getName();
 		ReleaseDifference releaseDifference = new ReleaseDifference();
 		List<String> applicationNamesToUpgrade = Collections.singletonList("test");
+		String manifestData = ManifestUtils.createManifest(replacingRelease.getPkg(), new HashMap<>());
+		Manifest manifest = new Manifest();
+		manifest.setData(manifestData);
+		replacingRelease.setManifest(manifest);
 		return new ReleaseAnalysisReport(applicationNamesToUpgrade, releaseDifference, existingRelease,
 				replacingRelease);
 	}
 
 	public Release status(Release release) {
+		logger.info("Checking application status for the release: "+ release.getName());
 		ApplicationManifest applicationManifest = getApplicationManifest(release);
 		String applicationName = applicationManifest.getName();
 		AppStatus appStatus = null;
@@ -316,34 +320,6 @@ public class CFManifestDeployerReleaseManager implements ReleaseManager {
 		return AppStatus.of(deploymentId)
 				.generalState(DeploymentState.error)
 				.build();
-	}
-
-	<T> Function<Mono<T>, Mono<T>> statusRetry(String id) {
-		long statusTimeout = 5_000L;
-		long requestTimeout = Math.round(statusTimeout * 0.40); // wait 500ms with default status timeout of 2000ms
-		long initialRetryDelay = Math.round(statusTimeout * 0.10); // wait 200ms with status timeout of 2000ms
-
-		if (requestTimeout < 500L) {
-			logger.info("Computed statusRetry Request timeout = {} ms is below 500ms minimum value.  Setting to 500ms",
-					requestTimeout);
-			requestTimeout = 500L;
-		}
-		final long requestTimeoutToUse = requestTimeout;
-		return m -> m.timeout(Duration.ofMillis(requestTimeoutToUse))
-				.doOnError(e -> logger.warn(
-						String.format("Error getting status for %s within %sms, Retrying operation.", id,
-								requestTimeoutToUse)))
-				.retryWhen(DelayUtils.exponentialBackOffError(
-						Duration.ofMillis(initialRetryDelay), //initial retry delay
-						Duration.ofMillis(statusTimeout / 2), // max retry delay
-						Duration.ofMillis(statusTimeout)) // max total retry time
-						.andThen(retries -> Flux.from(retries).doOnComplete(() ->
-								logger.info(
-										"Successfully retried getStatus operation status [{}] for {}",
-										id))))
-				.doOnError(e -> logger.error(
-						String.format("Retry operation on getStatus failed for %s.  Max retry time %sms",
-								id, statusTimeout)));
 	}
 
 	public Release delete(Release release) {

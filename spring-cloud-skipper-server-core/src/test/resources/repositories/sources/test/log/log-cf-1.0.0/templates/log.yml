@@ -1,8 +1,0 @@
-apiVersion: skipper.spring.io/v1
-kind: CFApplication
-metadata:
-  name: log-cf
-spec:
-  manifest: file:///Users/igopinathan/dev/git/ilayaperumalg/spring-cloud-skipper/spring-cloud-skipper-server-core/src/test/resources/repositories/sources/test/log/log-cf-1.0.0/log-manifest.yml
-  resource: maven://org.springframework.cloud.stream.app:log-sink-rabbit
-  version: 1.3.0.RELEASE
