@@ -364,8 +364,10 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 	public ReleaseAnalyzer releaseAnalysisService(
 			SpringCloudDeployerApplicationManifestReader applicationManifestReader,
 			CFApplicationManifestReader cfApplicationManifestReader,
-			DelegatingResourceLoader delegatingResourceLoader) {
-		return new ReleaseAnalyzer(applicationManifestReader , cfApplicationManifestReader, delegatingResourceLoader);
+			DelegatingResourceLoader delegatingResourceLoader,
+			CFApplicationDeployer cfApplicationDeployer) {
+		return new ReleaseAnalyzer(applicationManifestReader , cfApplicationManifestReader, delegatingResourceLoader,
+				cfApplicationDeployer);
 	}
 
 	@Bean

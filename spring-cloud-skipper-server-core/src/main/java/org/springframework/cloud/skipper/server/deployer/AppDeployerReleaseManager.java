@@ -96,9 +96,9 @@ public class AppDeployerReleaseManager implements ReleaseManager {
 				SkipperManifestKind.SpringCloudDeployerApplication.name()};
 	}
 
-	public Release install(Release releaseInput) {
-		Release release = this.releaseRepository.save(releaseInput);
-		logger.debug("Manifest = " + ArgumentSanitizer.sanitizeYml(releaseInput.getManifest().getData()));
+	public Release install(Release newRelease) {
+		Release release = this.releaseRepository.save(newRelease);
+		logger.debug("Manifest = " + ArgumentSanitizer.sanitizeYml(newRelease.getManifest().getData()));
 		// Deploy the application
 		List<? extends SpringCloudDeployerApplicationManifest> applicationSpecList = this.applicationManifestReader
 				.read(release.getManifest().getData());

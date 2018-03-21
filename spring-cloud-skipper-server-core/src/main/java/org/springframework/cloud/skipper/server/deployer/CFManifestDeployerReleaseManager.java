@@ -18,7 +18,6 @@ package org.springframework.cloud.skipper.server.deployer;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
@@ -32,14 +31,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cloud.deployer.resource.support.DelegatingResourceLoader;
 import org.springframework.cloud.skipper.deployer.cloudfoundry.PlatformCloudFoundryOperations;
 import org.springframework.cloud.skipper.domain.CFApplicationManifestReader;
-import org.springframework.cloud.skipper.domain.CFApplicationSkipperManifest;
 import org.springframework.cloud.skipper.domain.Manifest;
 import org.springframework.cloud.skipper.domain.Release;
 import org.springframework.cloud.skipper.domain.SkipperManifestKind;
 import org.springframework.cloud.skipper.domain.SkipperManifestReader;
 import org.springframework.cloud.skipper.domain.Status;
 import org.springframework.cloud.skipper.domain.StatusCode;
-import org.springframework.cloud.skipper.domain.deployer.ReleaseDifference;
 import org.springframework.cloud.skipper.server.domain.AppDeployerData;
 import org.springframework.cloud.skipper.server.repository.AppDeployerDataRepository;
 import org.springframework.cloud.skipper.server.repository.DeployerRepository;
@@ -102,16 +99,16 @@ public class CFManifestDeployerReleaseManager implements ReleaseManager {
 		return new String[] { SkipperManifestKind.CFApplication.name() };
 	}
 
-	public Release install(Release releaseInput) {
-		Release release = this.releaseRepository.save(releaseInput);
+	public Release install(Release newRelease) {
+		Release release = this.releaseRepository.save(newRelease);
 		ApplicationManifest applicationManifest = this.cfApplicationDeployer.getCFApplicationManifest(release);
 		Assert.isTrue(applicationManifest != null, "CF Application Manifest must be set");
-		logger.debug("Manifest = " + ArgumentSanitizer.sanitizeYml(releaseInput.getManifest().getData()));
+		logger.debug("Manifest = " + ArgumentSanitizer.sanitizeYml(newRelease.getManifest().getData()));
 		// Deploy the application
 		String applicationName = applicationManifest.getName();
 		Map<String, String> appDeploymentData = new HashMap<>();
 		appDeploymentData.put(applicationManifest.getName(), applicationManifest.toString());
-		this.platformCloudFoundryOperations.getCloudFoundryOperations(releaseInput.getPlatformName())
+		this.platformCloudFoundryOperations.getCloudFoundryOperations(newRelease.getPlatformName())
 				.applications().pushManifest(
 				PushApplicationManifestRequest.builder()
 						.manifest(applicationManifest)
@@ -157,27 +154,18 @@ public class CFManifestDeployerReleaseManager implements ReleaseManager {
 				&& ((AbstractCloudFoundryException) t).getStatusCode() == HttpStatus.NOT_FOUND.value();
 	}
 
-	public List<CFApplicationSkipperManifest> getReleaseManifest(Release release) {
-		return this.cfApplicationManifestReader.read(release.getManifest().getData());
-	}
-
 	@Override
 	public ReleaseAnalysisReport createReport(Release existingRelease, Release replacingRelease) {
-		List<CFApplicationSkipperManifest> existingReleaseManifest = getReleaseManifest(existingRelease);
-		List<CFApplicationSkipperManifest> replacingReleaseManifest = getReleaseManifest(replacingRelease);
-		//		ApplicationManifest existingApplicationManifest = updateApplicationPath(existingRelease);
-		//		ApplicationManifest replacingApplicationManifest = updateApplicationPath(replacingRelease);
-		//		ApplicationManifestDifferenceFactory applicationManifestDifferenceFactory = new ApplicationManifestDifferenceFactory();
-		//		String existingApplicationName = existingApplicationManifest.getName();
-		//		String replacingApplicationName = replacingApplicationManifest.getName();
-		ReleaseDifference releaseDifference = new ReleaseDifference();
-		List<String> applicationNamesToUpgrade = Collections.singletonList("test");
-		String manifestData = ManifestUtils.createManifest(replacingRelease.getPkg(), new HashMap<>());
+		ReleaseAnalysisReport releaseAnalysisReport = this.releaseAnalyzer.analyze(existingRelease, replacingRelease);
+		ApplicationManifest applicationManifest = this.cfApplicationDeployer.getCFApplicationManifest(replacingRelease);
+		Map<String, ?> configValues = CFApplicationManifestUtils.getCFManifestMap(applicationManifest);
+		String manifestData = ManifestUtils.createManifest(replacingRelease.getPkg(), configValues);
+		logger.debug("Replacing Release Manifest = " + ArgumentSanitizer.sanitizeYml(manifestData));
 		Manifest manifest = new Manifest();
 		manifest.setData(manifestData);
 		replacingRelease.setManifest(manifest);
-		return new ReleaseAnalysisReport(applicationNamesToUpgrade, releaseDifference, existingRelease,
-				replacingRelease);
+		return new ReleaseAnalysisReport(releaseAnalysisReport.getApplicationNamesToUpgrade(),
+				releaseAnalysisReport.getReleaseDifference(), existingRelease, replacingRelease);
 	}
 
 	public Release status(Release release) {

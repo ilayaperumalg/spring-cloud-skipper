@@ -91,7 +91,7 @@ public class DeleteStep {
 			}
 		}
 		else if (this.cfApplicationManifestReader.assertSupportedKinds(releaseManifest)) {
-			ApplicationManifest applicationManifest = CFApplicationManifestUtils.getCFManifest(release);
+			ApplicationManifest applicationManifest = CFApplicationManifestUtils.updateApplicationName(release);
 			String applicationName = applicationManifest.getName();
 			DeleteApplicationRequest deleteApplicationRequest = DeleteApplicationRequest.builder().name(applicationName)
 					.build();

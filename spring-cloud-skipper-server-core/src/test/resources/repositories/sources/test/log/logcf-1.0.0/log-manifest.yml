@@ -1,5 +1,5 @@
 applications:
-- name: log-cf
+- name: logcf
   memory: 1G
   disk_quota: 1G
   timeout: 180

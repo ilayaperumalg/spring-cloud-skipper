@@ -18,8 +18,13 @@ package org.springframework.cloud.skipper.server.deployer;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 import io.jsonwebtoken.lang.Assert;
 import org.cloudfoundry.operations.applications.ApplicationManifest;
@@ -30,6 +35,7 @@ import org.springframework.cloud.deployer.resource.docker.DockerResource;
 import org.springframework.cloud.skipper.domain.FileHolder;
 import org.springframework.cloud.skipper.domain.Release;
 import org.springframework.core.io.Resource;
+import org.springframework.util.StringUtils;
 
 public class CFApplicationManifestUtils {
 
@@ -40,7 +46,8 @@ public class CFApplicationManifestUtils {
 			if (application != null && application instanceof DockerResource) {
 				String uriString = application.getURI().toString();
 				applicationManifestBuilder.docker(
-						Docker.builder().image(uriString.substring(uriString.indexOf("docker:"))).build());
+						Docker.builder().image(uriString.replaceFirst("docker:", "")).build())
+						.path(null);
 			}
 			else {
 				applicationManifestBuilder.path(application.getFile().toPath());
@@ -52,19 +59,46 @@ public class CFApplicationManifestUtils {
 		return applicationManifestBuilder.build();
 	}
 
-	public static ApplicationManifest getCFManifest(Release release) {
-		File manifestYaml = getCFManifestFileFromPackage(release);
-		if (manifestYaml != null) {
-			List<ApplicationManifest> applicationManifestList = ApplicationManifestUtils.read(manifestYaml.toPath());
-			manifestYaml.delete();
-			Assert.isTrue(applicationManifestList.size() == 1, "Expected one application manifest entry. "
-					+ "Multiple or zero application manifests are not supported yet.");
-			ApplicationManifest applicationManifest = applicationManifestList.get(0);
-			ApplicationManifest.Builder applicationManifestBuilder = ApplicationManifest.builder()
-					.from(applicationManifest).name(getCFApplicationName(release, applicationManifest));
-			return applicationManifestBuilder.build();
+	public static ApplicationManifest updateApplicationName(String cfManifestYamlString, Release release) {
+		if (cfManifestYamlString != null) {
+			try {
+				File manifestYaml = File.createTempFile(release.getName() + new Random().nextLong(), "yml");
+				Path manifestYamlPath = manifestYaml.toPath();
+				Files.write(manifestYamlPath, cfManifestYamlString.getBytes(), StandardOpenOption.APPEND);
+				List<ApplicationManifest> applicationManifestList = ApplicationManifestUtils.read(manifestYamlPath);
+				manifestYaml.delete();
+				Assert.isTrue(applicationManifestList.size() == 1, "Expected one application manifest entry. "
+						+ "Multiple or zero application manifests are not supported yet.");
+				ApplicationManifest applicationManifest = applicationManifestList.get(0);
+				ApplicationManifest.Builder applicationManifestBuilder = ApplicationManifest.builder()
+						.from(applicationManifest).name(getCFApplicationName(release, applicationManifest));
+				return applicationManifestBuilder.build();
+			}
+			catch (IOException e) {
+				throw new IllegalArgumentException(e);
+			}
 		}
 		return null;
+	}
+
+	public static ApplicationManifest updateApplicationName(Release release) {
+		String cfManifestYamlString = getCFManifestYamlStringFromPackage(release);
+		return updateApplicationName(cfManifestYamlString, release);
+	}
+
+	public static Map<String, String> getCFManifestMap(ApplicationManifest applicationManifest) {
+		String applicationManifestString = applicationManifest.toString();
+		applicationManifestString = applicationManifestString.substring(("ApplicationManifest{").length(),
+				applicationManifestString.length() - 1);
+		List<String> applicationManifestProperties = Arrays.asList(
+				StringUtils.commaDelimitedListToStringArray(applicationManifestString));
+		Map<String, String> applicationManifestMap = new HashMap<>();
+		for (String applicationManifestProperty: applicationManifestProperties) {
+			String[] splitString = StringUtils.split(applicationManifestProperty, "=");
+			String valueString = splitString[1].replaceAll("\\[", "").replaceAll("\\]", "");
+			applicationManifestMap.put(splitString[0], valueString);
+		}
+		return applicationManifestMap;
 	}
 
 	private static String getCFApplicationName(Release release, ApplicationManifest applicationManifest) {
@@ -76,19 +110,12 @@ public class CFApplicationManifestUtils {
 		}
 	}
 
-	private static File getCFManifestFileFromPackage(Release release) {
+	public static String getCFManifestYamlStringFromPackage(Release release) {
 		List<FileHolder> fileHolders = release.getPkg().getFileHolders();
 		for (FileHolder fileHolder : fileHolders) {
 			String fileName = fileHolder.getName();
 			if (fileName.endsWith("manifest.yaml") || fileName.endsWith("manifest.yml")) {
-				try {
-					File manifestYaml = File.createTempFile(fileName, "yml");
-					Files.write(manifestYaml.toPath(), fileHolder.getBytes(), StandardOpenOption.APPEND);
-					return manifestYaml;
-				}
-				catch (IOException e) {
-					throw new IllegalArgumentException(e);
-				}
+				return new String(fileHolder.getBytes());
 			}
 		}
 		return null;
