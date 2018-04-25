@@ -1,12 +1,10 @@
 applications:
-- name: logcf
+- name: python-printer
   memory: 1G
   disk_quota: 1G
   timeout: 180
   instances: 1
-  path: file:///Users/igopinathan/dev/temp/testing/test.py.zip
+  path: https://github.com/ilayaperumalg/sandbox/raw/master/python/hello.py.zip
   buildpack: python_buildpack
-  command: python test.py
+  command: python hello.py
   health-check-type: none
-  services:
-    - rabbit
