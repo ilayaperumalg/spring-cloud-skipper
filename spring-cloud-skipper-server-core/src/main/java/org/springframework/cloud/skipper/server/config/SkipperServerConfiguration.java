@@ -17,6 +17,7 @@ package org.springframework.cloud.skipper.server.config;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
@@ -52,9 +53,11 @@ import org.springframework.cloud.skipper.server.controller.SkipperErrorAttribute
 import org.springframework.cloud.skipper.server.controller.VersionInfoProperties;
 import org.springframework.cloud.skipper.server.deployer.AppDeploymentRequestFactory;
 import org.springframework.cloud.skipper.server.deployer.CFManifestApplicationDeployer;
-import org.springframework.cloud.skipper.server.deployer.DefaultReleaseManager;
+import org.springframework.cloud.skipper.server.deployer.CFReleaseManager;
+import org.springframework.cloud.skipper.server.deployer.DelegatingReleaseManager;
 import org.springframework.cloud.skipper.server.deployer.ReleaseAnalyzer;
 import org.springframework.cloud.skipper.server.deployer.ReleaseManager;
+import org.springframework.cloud.skipper.server.deployer.SpringCloudDeployerReleaseManager;
 import org.springframework.cloud.skipper.server.deployer.strategies.DeleteStep;
 import org.springframework.cloud.skipper.server.deployer.strategies.DeployAppStep;
 import org.springframework.cloud.skipper.server.deployer.strategies.HandleHealthCheckStep;
@@ -200,7 +203,7 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 	public ReleaseReportService releaseReportService(PackageMetadataRepository packageMetadataRepository,
 			ReleaseRepository releaseRepository,
 			PackageService packageService,
-			ReleaseManager releaseManager) {
+			DelegatingReleaseManager releaseManager) {
 		return new ReleaseReportService(packageMetadataRepository, releaseRepository, packageService, releaseManager);
 	}
 
@@ -208,7 +211,7 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 	public ReleaseService releaseService(PackageMetadataRepository packageMetadataRepository,
 			ReleaseRepository releaseRepository,
 			PackageService packageService,
-			ReleaseManager releaseManager,
+			DelegatingReleaseManager releaseManager,
 			DeployerRepository deployerRepository,
 			PackageMetadataService packageMetadataService) {
 		return new ReleaseService(packageMetadataRepository, releaseRepository,
@@ -217,7 +220,7 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 
 	@Bean
 	@ConditionalOnProperty(prefix = "spring.cloud.skipper.server", name = "enableReleaseStateUpdateService", matchIfMissing = true)
-	public ReleaseStateUpdateService releaseStateUpdateService(ReleaseManager releaseManager,
+	public ReleaseStateUpdateService releaseStateUpdateService(DelegatingReleaseManager releaseManager,
 			ReleaseRepository releaseRepository) {
 		return new ReleaseStateUpdateService(releaseManager, releaseRepository);
 	}
@@ -234,18 +237,31 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 	// Deployer Package
 
 	@Bean
-	public DefaultReleaseManager defaultReleaseManager(ReleaseRepository releaseRepository,
+	public DelegatingReleaseManager delegatingReleaseManager(List<ReleaseManager> releaseManagers) {
+		return new DelegatingReleaseManager(releaseManagers);
+	}
+
+	@Bean
+	public CFReleaseManager cfReleaseManager(ReleaseRepository releaseRepository,
+			AppDeployerDataRepository appDeployerDataRepository,
+			ReleaseAnalyzer releaseAnalyzer,
+			CFApplicationManifestReader cfApplicationManifestReader,
+			PlatformCloudFoundryOperations platformCloudFoundryOperations,
+			CFManifestApplicationDeployer cfManifestApplicationDeployer) {
+		return new CFReleaseManager(releaseRepository, appDeployerDataRepository,
+				releaseAnalyzer, cfApplicationManifestReader,
+				platformCloudFoundryOperations, cfManifestApplicationDeployer);
+	}
+
+	@Bean
+	public SpringCloudDeployerReleaseManager appDeployerReleaseManager(ReleaseRepository releaseRepository,
 			AppDeployerDataRepository appDeployerDataRepository,
 			DeployerRepository deployerRepository,
 			ReleaseAnalyzer releaseAnalyzer,
 			AppDeploymentRequestFactory appDeploymentRequestFactory,
-			SpringCloudDeployerApplicationManifestReader applicationManifestReader,
-			CFApplicationManifestReader cfApplicationManifestReader,
-			PlatformCloudFoundryOperations platformCloudFoundryOperations,
-			CFManifestApplicationDeployer cfManifestApplicationDeployer) {
-		return new DefaultReleaseManager(releaseRepository, appDeployerDataRepository, deployerRepository,
-				releaseAnalyzer, appDeploymentRequestFactory, applicationManifestReader, cfApplicationManifestReader,
-				platformCloudFoundryOperations, cfManifestApplicationDeployer);
+			SpringCloudDeployerApplicationManifestReader applicationManifestReader) {
+		return new SpringCloudDeployerReleaseManager(releaseRepository, appDeployerDataRepository, deployerRepository,
+				releaseAnalyzer, appDeploymentRequestFactory, applicationManifestReader);
 	}
 
 	@Bean
@@ -314,7 +330,7 @@ public class SkipperServerConfiguration implements AsyncConfigurer {
 	public HandleHealthCheckStep healthCheckAndDeleteStep(ReleaseRepository releaseRepository,
 			AppDeployerDataRepository appDeployerDataRepository,
 			DeleteStep deleteStep,
-			ReleaseManager releaseManager) {
+			DelegatingReleaseManager releaseManager) {
 		return new HandleHealthCheckStep(releaseRepository,
 				appDeployerDataRepository,
 				deleteStep,

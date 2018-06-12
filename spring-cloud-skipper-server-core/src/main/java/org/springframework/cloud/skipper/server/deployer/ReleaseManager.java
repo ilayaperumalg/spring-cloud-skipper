@@ -62,4 +62,6 @@ public interface ReleaseManager {
 	 */
 	Release status(Release release);
 
+	boolean canSupport(Release release);
+
 }
