@@ -19,7 +19,6 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.springframework.cloud.skipper.domain.Release;
-import org.springframework.cloud.skipper.domain.SkipperManifestKind;
 import org.springframework.cloud.skipper.server.deployer.ReleaseAnalysisReport;
 import org.springframework.cloud.skipper.server.deployer.strategies.UpgradeStrategy;
 
@@ -52,7 +51,7 @@ public class CloudFoundrySimpleRedBlackUpgradeStrategy implements UpgradeStrateg
 
 	@Override
 	public Collection<String> getSupportedKinds() {
-		return Arrays.asList(SkipperManifestKind.CFApplication.name());
+		return Arrays.asList("CFApplication");
 	}
 	
 	@Override

@@ -15,11 +15,6 @@
  */
 package org.springframework.cloud.skipper.deployer.cloudfoundry;
 
-import static org.springframework.cloud.skipper.deployer.cloudfoundry.CFManifestApplicationDeployer.PUSH_REQUEST_TIMEOUT;
-import static org.springframework.cloud.skipper.deployer.cloudfoundry.CFManifestApplicationDeployer.STAGING_TIMEOUT;
-import static org.springframework.cloud.skipper.deployer.cloudfoundry.CFManifestApplicationDeployer.STARTUP_TIMEOUT;
-import static org.springframework.cloud.skipper.deployer.cloudfoundry.CFManifestApplicationDeployer.isNotFoundError;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import org.springframework.cloud.skipper.domain.Manifest;
 import org.springframework.cloud.skipper.domain.Release;
-import org.springframework.cloud.skipper.domain.SkipperManifestKind;
 import org.springframework.cloud.skipper.domain.Status;
 import org.springframework.cloud.skipper.domain.StatusCode;
 import org.springframework.cloud.skipper.server.deployer.ReleaseAnalysisReport;
@@ -45,6 +39,11 @@ import org.springframework.cloud.skipper.server.util.ArgumentSanitizer;
 import org.springframework.cloud.skipper.server.util.ManifestUtils;
 import org.springframework.util.Assert;
 
+import static org.springframework.cloud.skipper.deployer.cloudfoundry.CFManifestApplicationDeployer.PUSH_REQUEST_TIMEOUT;
+import static org.springframework.cloud.skipper.deployer.cloudfoundry.CFManifestApplicationDeployer.STAGING_TIMEOUT;
+import static org.springframework.cloud.skipper.deployer.cloudfoundry.CFManifestApplicationDeployer.STARTUP_TIMEOUT;
+import static org.springframework.cloud.skipper.deployer.cloudfoundry.CFManifestApplicationDeployer.isNotFoundError;
+
 /**
  * A ReleaseManager implementation that uses an CF manifest based deployer.
  *
@@ -53,8 +52,6 @@ import org.springframework.util.Assert;
  * @author Janne Valkealahti
  */
 public class CloudFoundryReleaseManager implements ReleaseManager {
-
-	public static final String SPRING_CLOUD_DEPLOYER_COUNT = "spring.cloud.deployer.count";
 
 	private static final Logger logger = LoggerFactory.getLogger(CloudFoundryReleaseManager.class);
 
@@ -83,7 +80,7 @@ public class CloudFoundryReleaseManager implements ReleaseManager {
 
 	@Override
 	public Collection<String> getSupportedKinds() {
-		return Arrays.asList(SkipperManifestKind.CFApplication.name());
+		return Arrays.asList("CFApplication");
 	}
 	
 	public Release install(Release newRelease) {

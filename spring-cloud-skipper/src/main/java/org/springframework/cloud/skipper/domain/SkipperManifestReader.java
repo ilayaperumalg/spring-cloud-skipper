@@ -18,6 +18,4 @@ package org.springframework.cloud.skipper.domain;
 public interface SkipperManifestReader {
 
 	Object read(String manifest);
-
-	String[] getSupportedKinds();
 }

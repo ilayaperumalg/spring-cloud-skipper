@@ -19,7 +19,6 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.springframework.cloud.skipper.domain.Release;
-import org.springframework.cloud.skipper.domain.SkipperManifestKind;
 import org.springframework.cloud.skipper.server.deployer.ReleaseAnalysisReport;
 
 /**
@@ -47,8 +46,7 @@ public class SimpleRedBlackUpgradeStrategy implements UpgradeStrategy {
 	
 	@Override
 	public Collection<String> getSupportedKinds() {
-		return Arrays.asList(SkipperManifestKind.SpringBootApp.name(),
-				SkipperManifestKind.SpringCloudDeployerApplication.name());
+		return Arrays.asList("SpringBootApp", "SpringCloudDeployerApplication");
 	}
 
 	@Override

@@ -34,7 +34,6 @@ import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.skipper.SkipperException;
 import org.springframework.cloud.skipper.domain.Manifest;
 import org.springframework.cloud.skipper.domain.Release;
-import org.springframework.cloud.skipper.domain.SkipperManifestKind;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationManifest;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationManifestReader;
 import org.springframework.cloud.skipper.domain.SpringCloudDeployerApplicationSpec;
@@ -88,8 +87,7 @@ public class DefaultReleaseManager implements ReleaseManager {
 	
 	@Override
 	public Collection<String> getSupportedKinds() {
-		return Arrays.asList(SkipperManifestKind.SpringBootApp.name(),
-				SkipperManifestKind.SpringCloudDeployerApplication.name());
+		return Arrays.asList("SpringBootApp" , "SpringCloudDeployerApplication");
 	}
 
 	public Release install(Release newRelease) {

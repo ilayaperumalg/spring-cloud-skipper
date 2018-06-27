@@ -17,10 +17,7 @@ package org.springframework.cloud.skipper.domain;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -28,7 +25,6 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.yaml.snakeyaml.Yaml;
 
 import org.springframework.cloud.skipper.SkipperException;
 
@@ -45,68 +41,27 @@ public class CFApplicationManifestReader implements SkipperManifestReader {
 	private final static Logger logger = LoggerFactory.getLogger(CFApplicationManifestReader.class);
 
 	public List<CFApplicationSkipperManifest> read(String manifest) {
-		if (canSupport(manifest)) {
-			List<CFApplicationSkipperManifest> applicationSpecs = new ArrayList<>();
-			YAMLMapper mapper = new YAMLMapper();
-			mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-			try {
-				MappingIterator<CFApplicationSkipperManifest> it = mapper
-																	.readerFor(CFApplicationSkipperManifest.class)
-																	.readValues(manifest);
-				while (it.hasNextValue()) {
-					CFApplicationSkipperManifest appKind = it.next();
-					applicationSpecs.add(appKind);
-				}
-			}
-			catch (JsonMappingException e) {
-				logger.error("Can't parse Package's manifest YAML = " + manifest);
-				throw new SkipperException("JsonMappingException - Can't parse Package's manifest YAML = " + manifest,
-						e);
-			}
-			catch (IOException e) {
-				logger.error("Can't parse Package's manifest YAML = " + manifest);
-				throw new SkipperException("IOException - Can't parse Package's manifest YAML = " + manifest, e);
-			}
-			return applicationSpecs;
-		}
-		return Collections.emptyList();
-	}
-
-	public boolean canSupport(String manifest) {
-		Yaml yaml = new Yaml();
-		Iterable<Object> object = yaml.loadAll(manifest);
-		for (Object o : object) {
-			boolean supportKind = assertSupportedKind(o);
-			if (!supportKind) {
-				return false;
+		List<CFApplicationSkipperManifest> applicationSpecs = new ArrayList<>();
+		YAMLMapper mapper = new YAMLMapper();
+		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+		try {
+			MappingIterator<CFApplicationSkipperManifest> it = mapper
+					.readerFor(CFApplicationSkipperManifest.class)
+					.readValues(manifest);
+			while (it.hasNextValue()) {
+				CFApplicationSkipperManifest appKind = it.next();
+				applicationSpecs.add(appKind);
 			}
 		}
-		return true;
-	}
-
-	public String[] getSupportedKinds() {
-		return new String[] {SkipperManifestKind.CFApplication.name()};
-	}
-
-	private boolean assertSupportedKind(Object object) {
-		if (object == null) {
-			throw new SkipperException("Can't parse manifest, it is empty");
+		catch (JsonMappingException e) {
+			logger.error("Can't parse Package's manifest YAML = " + manifest);
+			throw new SkipperException("JsonMappingException - Can't parse Package's manifest YAML = " + manifest,
+					e);
 		}
-		Map<String, Object> manifestAsMap;
-		if (object instanceof Map) {
-			manifestAsMap = (Map<String, Object>) object;
+		catch (IOException e) {
+			logger.error("Can't parse Package's manifest YAML = " + manifest);
+			throw new SkipperException("IOException - Can't parse Package's manifest YAML = " + manifest, e);
 		}
-		else {
-			throw new SkipperException("Can't parse manifest, it is not a map.  Manifest = " + object);
-		}
-		Object kindObject = manifestAsMap.get("kind");
-		if (kindObject instanceof String) {
-			String kind = (String) kindObject;
-			if (Arrays.asList(getSupportedKinds()).contains(kind)) {
-				logger.debug("Found supported kind " + kind);
-				return true;
-			}
-		}
-		return false;
+		return applicationSpecs;
 	}
 }

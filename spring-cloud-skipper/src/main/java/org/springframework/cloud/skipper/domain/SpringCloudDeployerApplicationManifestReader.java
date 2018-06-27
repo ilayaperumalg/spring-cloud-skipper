@@ -46,68 +46,26 @@ public class SpringCloudDeployerApplicationManifestReader implements SkipperMani
 	private final static Logger logger = LoggerFactory.getLogger(SpringCloudDeployerApplicationManifestReader.class);
 
 	public List<SpringCloudDeployerApplicationManifest> read(String manifest) {
-		if (canSupport(manifest)) {
-			List<SpringCloudDeployerApplicationManifest> applicationSpecs = new ArrayList<>();
-			YAMLMapper mapper = new YAMLMapper();
-			mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-			try {
-				MappingIterator<SpringCloudDeployerApplicationManifest> it = mapper.readerFor(
-						SpringCloudDeployerApplicationManifest.class).readValues(manifest);
-				while (it.hasNextValue()) {
-					SpringCloudDeployerApplicationManifest appKind = it.next();
-					applicationSpecs.add(appKind);
-				}
-			}
-			catch (JsonMappingException e) {
-				logger.error("Can't parse Package's manifest YAML = " + manifest);
-				throw new SkipperException("JsonMappingException - Can't parse Package's manifest YAML = " + manifest,
-						e);
-			}
-			catch (IOException e) {
-				logger.error("Can't parse Package's manifest YAML = " + manifest);
-				throw new SkipperException("IOException - Can't parse Package's manifest YAML = " + manifest, e);
-			}
-			return applicationSpecs;
-		}
-		return Collections.emptyList();
-	}
-
-	public boolean canSupport(String manifest) {
-		Yaml yaml = new Yaml();
-		Iterable<Object> object = yaml.loadAll(manifest);
-		for (Object o : object) {
-			boolean supportKind = assertSupportedKind(o);
-			if (!supportKind) {
-				return false;
+		List<SpringCloudDeployerApplicationManifest> applicationSpecs = new ArrayList<>();
+		YAMLMapper mapper = new YAMLMapper();
+		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+		try {
+			MappingIterator<SpringCloudDeployerApplicationManifest> it = mapper.readerFor(
+					SpringCloudDeployerApplicationManifest.class).readValues(manifest);
+			while (it.hasNextValue()) {
+				SpringCloudDeployerApplicationManifest appKind = it.next();
+				applicationSpecs.add(appKind);
 			}
 		}
-		return true;
-	}
-
-	public String[] getSupportedKinds() {
-		return new String[] {SkipperManifestKind.SpringBootApp.name(),
-				SkipperManifestKind.SpringCloudDeployerApplication.name()};
-	}
-
-	private boolean assertSupportedKind(Object object) {
-		if (object == null) {
-			throw new SkipperException("Can't parse manifest, it is empty");
+		catch (JsonMappingException e) {
+			logger.error("Can't parse Package's manifest YAML = " + manifest);
+			throw new SkipperException("JsonMappingException - Can't parse Package's manifest YAML = " + manifest,
+					e);
 		}
-		Map<String, Object> manifestAsMap;
-		if (object instanceof Map) {
-			manifestAsMap = (Map<String, Object>) object;
+		catch (IOException e) {
+			logger.error("Can't parse Package's manifest YAML = " + manifest);
+			throw new SkipperException("IOException - Can't parse Package's manifest YAML = " + manifest, e);
 		}
-		else {
-			throw new SkipperException("Can't parse manifest, it is not a map.  Manifest = " + object);
-		}
-		Object kindObject = manifestAsMap.get("kind");
-		if (kindObject instanceof String) {
-			String kind = (String) kindObject;
-			if (Arrays.asList(getSupportedKinds()).contains(kind)) {
-				logger.debug("Found supported kind " + kind);
-				return true;
-			}
-		}
-		return false;
+		return applicationSpecs;
 	}
 }
