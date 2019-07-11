@@ -16,6 +16,7 @@
 package org.springframework.cloud.skipper.server.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.skipper.PackageDeleteException;
@@ -118,13 +119,13 @@ public class ReleaseController {
 
 	@RequestMapping(path = "/logs/{name}", method = RequestMethod.GET)
 	@ResponseStatus(HttpStatus.OK)
-	public ResponseEntity<String> log(@PathVariable("name") String name) {
+	public ResponseEntity<Map<String, String>> log(@PathVariable("name") String name) {
 		return new ResponseEntity<>(this.releaseService.getLog(name), HttpStatus.OK);
 	}
 
 	@RequestMapping(path = "/logs/{name}/{appName}", method = RequestMethod.GET)
 	@ResponseStatus(HttpStatus.OK)
-	public ResponseEntity<String> log(@PathVariable("name") String name, @PathVariable("appName") String appName) {
+	public ResponseEntity<Map<String, String>> log(@PathVariable("name") String name, @PathVariable("appName") String appName) {
 		return new ResponseEntity<>(this.releaseService.getLog(name, appName), HttpStatus.OK);
 	}
 

@@ -17,6 +17,7 @@
 package org.springframework.cloud.skipper.server.controller.docs;
 
 import java.nio.charset.Charset;
+import java.util.Collections;
 
 import org.junit.Test;
 
@@ -37,7 +38,7 @@ public class LogsDocumentation extends BaseDocumentation {
 	@Test
 	public void getLogsofRelease() throws Exception {
 		Release release = createTestRelease();
-		when(this.releaseService.getLog(release.getName())).thenReturn("Logs");
+		when(this.releaseService.getLog(release.getName())).thenReturn(Collections.emptyMap());
 		final MediaType contentType = new MediaType(MediaType.APPLICATION_JSON.getType(),
 				MediaType.APPLICATION_JSON.getSubtype(), Charset.forName("utf8"));
 
@@ -53,7 +54,7 @@ public class LogsDocumentation extends BaseDocumentation {
 	@Test
 	public void getLogsofReleaseByAppName() throws Exception {
 		Release release = createTestRelease();
-		when(this.releaseService.getLog(release.getName(), "myapp")).thenReturn("Logs");
+		when(this.releaseService.getLog(release.getName(), "myapp")).thenReturn(Collections.EMPTY_MAP);
 
 		this.mockMvc.perform(
 				get("/api/release/logs/{releaseName}/{appName}",

@@ -17,6 +17,7 @@ package org.springframework.cloud.skipper.server.service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.After;
 import org.junit.Test;
@@ -181,7 +182,7 @@ public class ReleaseServiceTests extends AbstractIntegrationTest {
 		installRequest.setPackageIdentifier(packageIdentifier);
 		assertThat(release).isNotNull();
 		assertThat(release.getPkg().getMetadata().getVersion()).isEqualTo("1.0.0");
-		String logContent = this.releaseService.getLog(releaseName);
+		Map<String, String> logContent = this.releaseService.getLog(releaseName);
 		assertThat(logContent).isNotNull();
 	}
 

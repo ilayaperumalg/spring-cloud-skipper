@@ -18,14 +18,12 @@ package org.springframework.cloud.skipper.server.deployer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -309,14 +307,14 @@ public class DefaultReleaseManager implements ReleaseManager {
 	}
 
 	@Override
-	public String getLog(Release release) {
+	public Map<String, String> getLog(Release release) {
 		return getLog(release, null);
 	}
 
 	@Override
-	public String getLog(Release release, String appName) {
+	public Map<String, String> getLog(Release release, String appName) {
 		if (release.getInfo().getStatus().getStatusCode().equals(StatusCode.DELETED)) {
-			return "";
+			return Collections.EMPTY_MAP;
 		}
 		AppDeployerData appDeployerData = this.appDeployerDataRepository
 				.findByReleaseNameAndReleaseVersion(release.getName(), release.getVersion());
@@ -338,16 +336,7 @@ public class DefaultReleaseManager implements ReleaseManager {
 		for (Map.Entry<String, String> deploymentIdEntry: logApps.entrySet()) {
 			logMap.put(deploymentIdEntry.getKey(), appDeployer.getLog(deploymentIdEntry.getValue()));
 		}
-		ObjectMapper objectMapper = new ObjectMapper();
-		// Avoids serializing objects such as OutputStreams in LocalDeployer.
-		objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-		try {
-			return objectMapper.writeValueAsString(logMap);
-		}
-		catch (JsonProcessingException e) {
-			// TODO replace with SkipperException when it moves to domain module.
-			throw new IllegalArgumentException("Could not serialize logs", e);
-		}
+		return logMap;
 	}
 
 	public Release delete(Release release) {

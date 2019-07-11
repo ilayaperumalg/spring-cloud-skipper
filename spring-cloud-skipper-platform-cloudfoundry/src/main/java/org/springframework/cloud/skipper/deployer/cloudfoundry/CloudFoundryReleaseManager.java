@@ -23,9 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import org.cloudfoundry.operations.applications.ApplicationManifest;
 import org.cloudfoundry.operations.applications.LogsRequest;
 import org.cloudfoundry.operations.applications.PushApplicationManifestRequest;
@@ -170,12 +167,12 @@ public class CloudFoundryReleaseManager implements ReleaseManager {
 	}
 
 	@Override
-	public String getLog(Release release) {
+	public Map<String, String> getLog(Release release) {
 		return getLog(release, null);
 	}
 
 	@Override
-	public String getLog(Release release, String appName) {
+	public Map<String, String> getLog(Release release, String appName) {
 		logger.info("Checking application status for the release: " + release.getName());
 		ApplicationManifest applicationManifest = CloudFoundryApplicationManifestUtils.updateApplicationName(release);
 		String applicationName = applicationManifest.getName();
@@ -186,16 +183,9 @@ public class CloudFoundryReleaseManager implements ReleaseManager {
 		String logMessage = this.platformCloudFoundryOperations.getCloudFoundryOperations(release.getPlatformName()).applications()
 				.logs(LogsRequest.builder().name(applicationName).build())
 				.blockFirst(Duration.ofMillis(API_TIMEOUT.toMillis())).getMessage();
-		ObjectMapper objectMapper = new ObjectMapper();
-		// Avoids serializing objects such as OutputStreams in LocalDeployer.
-		objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-		try {
-			return objectMapper.writeValueAsString(logMessage);
-		}
-		catch (JsonProcessingException e) {
-			// TODO replace with SkipperException when it moves to domain module.
-			throw new IllegalArgumentException("Could not serialize logs", e);
-		}
+		Map<String, String> logMap = new HashMap<>();
+		logMap.put(appName, logMessage);
+		return logMap;
 	}
 
 }

@@ -17,6 +17,7 @@ package org.springframework.cloud.skipper.server.deployer;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.cloud.skipper.domain.Release;
 
@@ -81,7 +82,7 @@ public interface ReleaseManager {
 	 * @param release the release
 	 * @return the log content
 	 */
-	String getLog(Release release);
+	Map<String, String> getLog(Release release);
 
 	/**
 	 * Get the logs of a specific application inside the release.
@@ -90,6 +91,6 @@ public interface ReleaseManager {
 	 * @param appName the application name
 	 * @return the log content
 	 */
-	String getLog(Release release, String appName);
+	Map<String, String> getLog(Release release, String appName);
 
 }

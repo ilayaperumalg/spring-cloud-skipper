@@ -158,13 +158,13 @@ public class DefaultSkipperClient implements SkipperClient {
 	}
 
 	@Override
-	public String getLog(String releaseName) {
-		ParameterizedTypeReference<String> typeReference =
-				new ParameterizedTypeReference<String>() { };
+	public Map<String, String> getLog(String releaseName) {
+		ParameterizedTypeReference<Map<String, String>> typeReference =
+				new ParameterizedTypeReference<Map<String, String>>() { };
 		Map<String, String> uriVariables = new HashMap<String, String>();
 		uriVariables.put("releaseName", releaseName);
 
-		ResponseEntity<String> resourceResponseEntity =
+		ResponseEntity<Map<String, String>> resourceResponseEntity =
 				restTemplate.exchange(baseUri + "/release/logs/{releaseName}",
 						HttpMethod.GET,
 						null,
@@ -174,14 +174,14 @@ public class DefaultSkipperClient implements SkipperClient {
 	}
 
 	@Override
-	public String getLog(String releaseName, String appName) {
-		ParameterizedTypeReference<String> typeReference =
-				new ParameterizedTypeReference<String>() { };
+	public Map<String, String> getLog(String releaseName, String appName) {
+		ParameterizedTypeReference<Map<String, String>> typeReference =
+				new ParameterizedTypeReference<Map<String, String>>() { };
 		Map<String, String> uriVariables = new HashMap<String, String>();
 		uriVariables.put("releaseName", releaseName);
 		uriVariables.put("appName", appName);
 
-		ResponseEntity<String> resourceResponseEntity =
+		ResponseEntity<Map<String, String>> resourceResponseEntity =
 				restTemplate.exchange(baseUri + "/release/logs/{releaseName}/{appName}",
 						HttpMethod.GET,
 						null,

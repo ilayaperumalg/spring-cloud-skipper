@@ -16,6 +16,7 @@
 package org.springframework.cloud.skipper.client;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.cloud.skipper.domain.AboutResource;
 import org.springframework.cloud.skipper.domain.CancelRequest;
@@ -216,7 +217,7 @@ public interface SkipperClient {
 	 * @param releaseName the release name
 	 * @return the log content
 	 */
-	String getLog(String releaseName);
+	Map<String, String> getLog(String releaseName);
 
 
 	/**
@@ -227,5 +228,5 @@ public interface SkipperClient {
 	 * @param appName the application name
 	 * @return the log content
 	 */
-	String getLog(String releaseName, String appName);
+	Map<String, String> getLog(String releaseName, String appName);
 }

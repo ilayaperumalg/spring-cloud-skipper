@@ -16,6 +16,7 @@
 package org.springframework.cloud.skipper.client;
 
 import java.nio.charset.Charset;
+import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
@@ -156,7 +157,7 @@ public class DefaultSkipperClientTests {
 		MockRestServiceServer mockServer = MockRestServiceServer.bindTo(restTemplate).build();
 		mockServer.expect(requestTo("/release/logs/mylog")).andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-		String logContent = skipperClient.getLog("mylog");
+		Map<String, String> logContent = skipperClient.getLog("mylog");
 		mockServer.verify();
 
 		assertThat(logContent).isNotNull();
@@ -170,7 +171,7 @@ public class DefaultSkipperClientTests {
 		MockRestServiceServer mockServer = MockRestServiceServer.bindTo(restTemplate).build();
 		mockServer.expect(requestTo("/release/logs/mylog/app")).andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-		String logContent = skipperClient.getLog("mylog", "app");
+		Map<String, String> logContent = skipperClient.getLog("mylog", "app");
 		mockServer.verify();
 
 		assertThat(logContent).isNotNull();
