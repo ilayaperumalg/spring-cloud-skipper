@@ -334,7 +334,7 @@ public class DefaultReleaseManager implements ReleaseManager {
 			logApps = appNameDeploymentIdMap;
 		}
 		for (Map.Entry<String, String> deploymentIdEntry: logApps.entrySet()) {
-			logMap.put(deploymentIdEntry.getKey(), appDeployer.getLog(deploymentIdEntry.getValue()));
+			logMap.put(deploymentIdEntry.getValue(), appDeployer.getLog(deploymentIdEntry.getValue()));
 		}
 		return logMap;
 	}
