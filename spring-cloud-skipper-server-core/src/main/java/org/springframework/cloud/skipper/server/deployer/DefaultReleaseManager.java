@@ -34,6 +34,7 @@ import org.springframework.cloud.deployer.spi.app.DeploymentState;
 import org.springframework.cloud.deployer.spi.app.MultiStateAppDeployer;
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.skipper.SkipperException;
+import org.springframework.cloud.skipper.domain.LogInfo;
 import org.springframework.cloud.skipper.domain.Manifest;
 import org.springframework.cloud.skipper.domain.Release;
 import org.springframework.cloud.skipper.domain.SkipperManifestKind;
@@ -307,14 +308,14 @@ public class DefaultReleaseManager implements ReleaseManager {
 	}
 
 	@Override
-	public Map<String, String> getLog(Release release) {
+	public LogInfo getLog(Release release) {
 		return getLog(release, null);
 	}
 
 	@Override
-	public Map<String, String> getLog(Release release, String appName) {
+	public LogInfo getLog(Release release, String appName) {
 		if (release.getInfo().getStatus().getStatusCode().equals(StatusCode.DELETED)) {
-			return Collections.EMPTY_MAP;
+			return new LogInfo(Collections.EMPTY_MAP);
 		}
 		AppDeployerData appDeployerData = this.appDeployerDataRepository
 				.findByReleaseNameAndReleaseVersion(release.getName(), release.getVersion());
@@ -336,7 +337,7 @@ public class DefaultReleaseManager implements ReleaseManager {
 		for (Map.Entry<String, String> deploymentIdEntry: logApps.entrySet()) {
 			logMap.put(deploymentIdEntry.getValue(), appDeployer.getLog(deploymentIdEntry.getValue()));
 		}
-		return logMap;
+		return new LogInfo(logMap);
 	}
 
 	public Release delete(Release release) {

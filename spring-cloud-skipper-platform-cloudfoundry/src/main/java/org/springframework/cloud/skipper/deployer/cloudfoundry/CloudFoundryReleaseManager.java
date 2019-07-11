@@ -29,6 +29,7 @@ import org.cloudfoundry.operations.applications.PushApplicationManifestRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.cloud.skipper.domain.LogInfo;
 import org.springframework.cloud.skipper.domain.Release;
 import org.springframework.cloud.skipper.domain.SkipperManifestKind;
 import org.springframework.cloud.skipper.domain.Status;
@@ -167,12 +168,12 @@ public class CloudFoundryReleaseManager implements ReleaseManager {
 	}
 
 	@Override
-	public Map<String, String> getLog(Release release) {
+	public LogInfo getLog(Release release) {
 		return getLog(release, null);
 	}
 
 	@Override
-	public Map<String, String> getLog(Release release, String appName) {
+	public LogInfo getLog(Release release, String appName) {
 		logger.info("Checking application status for the release: " + release.getName());
 		ApplicationManifest applicationManifest = CloudFoundryApplicationManifestUtils.updateApplicationName(release);
 		String applicationName = applicationManifest.getName();
@@ -185,7 +186,7 @@ public class CloudFoundryReleaseManager implements ReleaseManager {
 				.blockFirst(Duration.ofMillis(API_TIMEOUT.toMillis())).getMessage();
 		Map<String, String> logMap = new HashMap<>();
 		logMap.put(appName, logMessage);
-		return logMap;
+		return new LogInfo(logMap);
 	}
 
 }

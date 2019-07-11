@@ -21,6 +21,7 @@ import java.util.Collections;
 
 import org.junit.Test;
 
+import org.springframework.cloud.skipper.domain.LogInfo;
 import org.springframework.cloud.skipper.domain.Release;
 import org.springframework.http.MediaType;
 
@@ -38,7 +39,7 @@ public class LogsDocumentation extends BaseDocumentation {
 	@Test
 	public void getLogsofRelease() throws Exception {
 		Release release = createTestRelease();
-		when(this.releaseService.getLog(release.getName())).thenReturn(Collections.emptyMap());
+		when(this.releaseService.getLog(release.getName())).thenReturn(new LogInfo(Collections.emptyMap()));
 		final MediaType contentType = new MediaType(MediaType.APPLICATION_JSON.getType(),
 				MediaType.APPLICATION_JSON.getSubtype(), Charset.forName("utf8"));
 
@@ -54,7 +55,7 @@ public class LogsDocumentation extends BaseDocumentation {
 	@Test
 	public void getLogsofReleaseByAppName() throws Exception {
 		Release release = createTestRelease();
-		when(this.releaseService.getLog(release.getName(), "myapp")).thenReturn(Collections.EMPTY_MAP);
+		when(this.releaseService.getLog(release.getName(), "myapp")).thenReturn(new LogInfo(Collections.EMPTY_MAP));
 
 		this.mockMvc.perform(
 				get("/api/release/logs/{releaseName}/{appName}",
