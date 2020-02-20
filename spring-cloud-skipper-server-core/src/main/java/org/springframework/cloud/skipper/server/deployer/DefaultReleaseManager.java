@@ -257,6 +257,7 @@ public class DefaultReleaseManager implements ReleaseManager {
 				StringUtils.collectionToCommaDelimitedString(deploymentIds));
 
 		if (!deploymentIds.isEmpty()) {
+			List<AppStatus> appStatusList = new ArrayList<>();
 			// mainly track deployed and unknown statuses. for any other
 			// combination, get more details from instances.
 			int deployedCount = 0;
@@ -266,14 +267,19 @@ public class DefaultReleaseManager implements ReleaseManager {
 				MultiStateAppDeployer multiStateAppDeployer = (MultiStateAppDeployer) appDeployer;
 				deploymentStateMap = multiStateAppDeployer.states(StringUtils.toStringArray(deploymentIds));
 			}
-			List<AppStatus> appStatusList = new ArrayList<>();
 			// Key = app name, value = deploymentId
 			Map<String, String> appNameDeploymentIdMap = appDeployerData.getDeploymentDataAsMap();
 			for (Map.Entry<String, String> nameDeploymentId : appNameDeploymentIdMap.entrySet()) {
 				String appName = nameDeploymentId.getKey();
 				String deploymentId = nameDeploymentId.getValue();
+				AppStatus appStatus = null;
 				// Copy the status to allow instance attribute mutation.
-				AppStatus appStatus = copyStatus(appDeployer.status(deploymentId));
+				if (deploymentStateMap.containsKey(deploymentId)) {
+					appStatus = AppStatus.of(deploymentId).generalState(deploymentStateMap.get(deploymentId)).build();
+				}
+				else {
+					appStatus = copyStatus(appDeployer.status(deploymentId));
+				}
 				Collection<AppInstanceStatus> instanceStatuses = appStatus.getInstances().values();
 				for (AppInstanceStatus instanceStatus : instanceStatuses) {
 					instanceStatus.getAttributes().put(SKIPPER_APPLICATION_NAME_ATTRIBUTE, appName);
